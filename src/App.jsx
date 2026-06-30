@@ -7,7 +7,7 @@ import EmojiBoss from './games/EmojiBoss.jsx'
 import AzQuiz from './games/AzQuiz.jsx'
 import VerteNeverte from './games/VerteNeverte.jsx'
 import { CAPTAINS } from './data/players.js'
-import { FEUD_QUESTIONS } from './data/familyFeud.js'
+import { GAMESET_1, GAMESET_2, FEUD_QUESTIONS } from './data/familyFeud.js'
 import { EMOJI_CATEGORIES } from './data/emoji.js'
 import { AZ_CATEGORIES } from './data/azquiz.js'
 import { VN_STATEMENTS } from './data/verteNeverte.js'
@@ -50,11 +50,17 @@ export default function App() {
   const resetTeams = () => { setTeams(freshTeams()); setDraftKey((k) => k + 1) }
 
   // Výsledky disciplín: pre každú hru 0 = Tím 1 (Fudy), 1 = Tím 2 (Myrell), 'tie' = remíza, null = nehrané
+  const [feudGameset, setFeudGameset] = useState(null) // 1 or 2
   const [results, setResults] = useState({ feud: null, emoji: null, az: null, vn: null })
   const report = (key) => (winner) => setResults((r) => ({ ...r, [key]: winner }))
   const clearResult = (key) => () => setResults((r) => ({ ...r, [key]: null }))
 
-  const go = (s) => { setScreen(s); window.scrollTo(0, 0) }
+  const go = (s) => {
+    // Intercept feud → show gameset selector first
+    const dest = s === 'feud' ? 'feud-select' : s
+    setScreen(dest); window.scrollTo(0, 0)
+  }
+  const startFeud = (gs) => { setFeudGameset(gs); setScreen('feud'); window.scrollTo(0, 0) }
 
   return (
     <div className="app">
@@ -82,8 +88,28 @@ export default function App() {
       <div style={{ display: screen === 'draft' ? 'block' : 'none' }}>
         <TeamDraft key={draftKey} setTeams={setTeams} />
       </div>
+      <div style={{ display: screen === 'feud-select' ? 'block' : 'none' }}>
+        <main className="page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 40, paddingTop: 48 }}>
+          <img src="/5-proti-5.png" alt="5 proti 5" style={{ maxWidth: 680, width: '95%', borderRadius: 20 }} />
+          <p style={{ color: 'var(--muted)', fontSize: 18, margin: 0 }}>Vyber sadu otázok pre túto partiu:</p>
+          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button className="btn btn-primary btn-xl" style={{ fontSize: 22, padding: '20px 48px' }} onClick={() => startFeud(1)}>
+              🟦 Gameset 1
+            </button>
+            <button className="btn btn-blue btn-xl" style={{ fontSize: 22, padding: '20px 48px' }} onClick={() => startFeud(2)}>
+              🟥 Gameset 2
+            </button>
+          </div>
+        </main>
+      </div>
       <div style={{ display: screen === 'feud' ? 'block' : 'none' }}>
-        <FamilyFeud teams={teams} report={report('feud')} clearResult={clearResult('feud')} questions={gameData.feud} />
+        <FamilyFeud
+          key={feudGameset}
+          teams={teams}
+          report={report('feud')}
+          clearResult={clearResult('feud')}
+          questions={feudGameset === 2 ? GAMESET_2 : GAMESET_1}
+        />
       </div>
       <div style={{ display: screen === 'emoji' ? 'block' : 'none' }}>
         <EmojiBoss teams={teams} report={report('emoji')} clearResult={clearResult('emoji')} categories={gameData.emoji} />

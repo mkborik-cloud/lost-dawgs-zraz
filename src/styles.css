@@ -225,6 +225,11 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .team-score .name { font-size: 20px; font-weight: 800; }
 .team-score .members { font-size: 11px; color: var(--muted); font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .team-score.t2 .members { text-align: right; }
+.lifelines { display: flex; gap: 4px; margin-top: 5px; }
+.team-score.t2 .lifelines { justify-content: flex-end; }
+.lifeline-icon { font-size: 22px; line-height: 1; transition: filter 0.2s, opacity 0.2s, transform 0.2s; }
+.lifeline-icon.active { filter: drop-shadow(0 0 6px gold); transform: scale(1.1); }
+.lifeline-icon.used { opacity: 0.18; filter: grayscale(1); }
 .team-score .pts { font-size: 48px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
 .team-score.t1 .pts { color: var(--t1); }
 .team-score.t2 .pts { color: var(--t2); }

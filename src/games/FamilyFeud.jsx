@@ -1,22 +1,24 @@
 import { useMemo, useState } from 'react'
 import { roundMultiplier, TOTAL_ROUNDS } from '../data/familyFeud.js'
+import { playBuzzer } from '../utils/sounds.js'
 
 export default function FamilyFeud({ teams, report, clearResult, questions }) {
   const FEUD_QUESTIONS = questions
   const TEAM_NAMES = teams.map((t) => t.name)
   const MEMBERS = teams.map((t) => t.members || [])
-  const [phase, setPhase] = useState('pick') // pick | play | end
+
+  const [phase, setPhase] = useState('play')
   const [scores, setScores] = useState([0, 0])
   const [round, setRound] = useState(1)
-  const [used, setUsed] = useState(new Set())
-  const [qIndex, setQIndex] = useState(null)
+  const [qIndex, setQIndex] = useState(0)
   const [revealed, setRevealed] = useState(new Set())
   const [strikes, setStrikes] = useState(0)
-  const [active, setActive] = useState(0) // 0 = Tím 1, 1 = Tím 2
+  const [active, setActive] = useState(0)
   const [stealing, setStealing] = useState(false)
+  const [lifelines, setLifelines] = useState([3, 3]) // remaining lifelines per team
 
   const mult = roundMultiplier(round)
-  const q = qIndex == null ? null : FEUD_QUESTIONS[qIndex]
+  const q = FEUD_QUESTIONS[qIndex] ?? null
 
   const bank = useMemo(() => {
     if (!q) return 0
@@ -27,40 +29,43 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
 
   const allRevealed = q && revealed.size === q.answers.length
 
-  // group questions by category for picker
-  const grouped = useMemo(() => {
-    const map = new Map()
-    FEUD_QUESTIONS.forEach((item, i) => {
-      if (!map.has(item.category)) map.set(item.category, [])
-      map.get(item.category).push({ ...item, i })
-    })
-    return [...map.entries()]
-  }, [FEUD_QUESTIONS])
-
-  function openQuestion(i) {
-    setQIndex(i); setRevealed(new Set()); setStrikes(0); setStealing(false); setPhase('play')
-  }
-
   function revealCell(i) {
     if (revealed.has(i)) return
     setRevealed((prev) => new Set(prev).add(i))
   }
 
   function addStrike() {
-    setStrikes((s) => Math.min(3, s + 1))
+    playBuzzer()
+    setTimeout(() => setStrikes((s) => Math.min(3, s + 1)), 1000)
+  }
+
+  function useLifeline(team) {
+    setLifelines((prev) => {
+      const next = [...prev]
+      if (next[team] > 0) next[team]--
+      return next
+    })
   }
 
   function assign(team) {
-    const newScores = [...scores]; newScores[team] += bank
+    const newScores = [...scores]
+    newScores[team] += bank
     setScores(newScores)
-    setUsed((prev) => new Set(prev).add(qIndex))
-    const next = round + 1
-    if (next > TOTAL_ROUNDS) {
+
+    const nextQ = qIndex + 1
+    const nextRound = round + 1
+
+    if (nextQ >= FEUD_QUESTIONS.length || nextRound > TOTAL_ROUNDS) {
       const w = newScores[0] === newScores[1] ? 'tie' : newScores[0] > newScores[1] ? 0 : 1
       report(w)
       setPhase('end')
     } else {
-      setRound(next); setQIndex(null); setPhase('pick')
+      setRound(nextRound)
+      setQIndex(nextQ)
+      setRevealed(new Set())
+      setStrikes(0)
+      setStealing(false)
+      setActive(0)
     }
   }
 
@@ -69,8 +74,9 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
   }
 
   function fullReset() {
-    setScores([0, 0]); setRound(1); setUsed(new Set()); setQIndex(null)
-    setRevealed(new Set()); setStrikes(0); setActive(0); setStealing(false); setPhase('pick')
+    setScores([0, 0]); setRound(1); setQIndex(0)
+    setRevealed(new Set()); setStrikes(0); setActive(0); setStealing(false)
+    setLifelines([3, 3]); setPhase('play')
     clearResult()
   }
 
@@ -99,13 +105,28 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
     )
   }
 
-  /* ---------- SCOREBOARD (shared) ---------- */
+  /* ---------- SCOREBOARD ---------- */
+  const Lifelines = ({ team }) => (
+    <div className="lifelines">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <span
+          key={i}
+          className={'lifeline-icon' + (i < lifelines[team] ? ' active' : ' used')}
+          title={i < lifelines[team] ? 'Joker k dispozícii' : 'Joker použitý'}
+        >
+          🃏
+        </span>
+      ))}
+    </div>
+  )
+
   const Scoreboard = () => (
     <div className="scorebar">
       <div className={'team-score t1' + (active === 0 ? ' active' : '')}>
         <div className="ts-info">
           <span className="name" style={{ color: 'var(--t1)' }}>{TEAM_NAMES[0]}</span>
           {MEMBERS[0].length > 0 && <span className="members">{MEMBERS[0].join(' · ')}</span>}
+          <Lifelines team={0} />
         </div>
         <span className="pts">{scores[0]}</span>
       </div>
@@ -119,48 +140,11 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
         <div className="ts-info">
           <span className="name" style={{ color: 'var(--t2)' }}>{TEAM_NAMES[1]}</span>
           {MEMBERS[1].length > 0 && <span className="members">{MEMBERS[1].join(' · ')}</span>}
+          <Lifelines team={1} />
         </div>
       </div>
     </div>
   )
-
-  /* ---------- PICK ---------- */
-  if (phase === 'pick') {
-    return (
-      <main className="page">
-        <div className="page-head">
-          <h1>5 proti 5 — Family Feud</h1>
-          <span className="pill">Kolo {round} · ×{mult}</span>
-        </div>
-        <p className="page-sub">Moderátor: vyber otázku pre toto kolo. Násobič bodov sa určuje podľa čísla kola.</p>
-        <Scoreboard />
-        <p className="mod-note">👁️ Túto obrazovku vidí len moderátor — na TV prepni až po výbere otázky.</p>
-
-        <div className="picker">
-          {grouped.map(([cat, items]) => (
-            <div className="picker-cat" key={cat}>
-              <h4>{items[0].icon} {cat}</h4>
-              {items.map((it) => (
-                <button
-                  key={it.i}
-                  className={'picker-item' + (used.has(it.i) ? ' used' : '')}
-                  onClick={() => openQuestion(it.i)}
-                >
-                  <span className="ico">{it.icon}</span>
-                  <span>{it.question}</span>
-                  <span className="badge">{used.has(it.i) ? '✔ hrané' : `${it.answers.length} odpovedí`}</span>
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
-
-        <div className="draft-actions" style={{ marginTop: 30 }}>
-          <button className="btn btn-ghost" onClick={fullReset}>Reštartovať hru</button>
-        </div>
-      </main>
-    )
-  }
 
   /* ---------- PLAY ---------- */
   return (
@@ -224,6 +208,26 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
         <div className="divider" />
 
         <div className="group">
+          <span style={{ color: 'var(--muted)', fontSize: 14 }}>Joker (lifeline):</span>
+          <button
+            className="btn btn-ghost"
+            onClick={() => useLifeline(0)}
+            disabled={lifelines[0] === 0}
+          >
+            🃏 {TEAM_NAMES[0]} ({lifelines[0]} zostatok)
+          </button>
+          <button
+            className="btn btn-ghost"
+            onClick={() => useLifeline(1)}
+            disabled={lifelines[1] === 0}
+          >
+            🃏 {TEAM_NAMES[1]} ({lifelines[1]} zostatok)
+          </button>
+        </div>
+
+        <div className="divider" />
+
+        <div className="group">
           <span style={{ color: 'var(--muted)', fontSize: 14 }}>Prideliť bank kola:</span>
           <button className="btn btn-blue" onClick={() => assign(0)}>→ {TEAM_NAMES[0]} (+{bank})</button>
           <button className="btn btn-primary" onClick={() => assign(1)}>→ {TEAM_NAMES[1]} (+{bank})</button>
@@ -237,7 +241,6 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
           <button className="btn btn-ghost" onClick={() => adjust(0, 5)}>T1 +5</button>
           <button className="btn btn-ghost" onClick={() => adjust(1, -5)}>T2 −5</button>
           <button className="btn btn-ghost" onClick={() => adjust(1, 5)}>T2 +5</button>
-          <button className="btn btn-ghost" onClick={() => { setQIndex(null); setPhase('pick') }}>← Iná otázka</button>
           <button className="btn btn-ghost" onClick={fullReset}>🔁 Reštart hry</button>
         </div>
       </div>
