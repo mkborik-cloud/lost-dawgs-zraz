@@ -149,7 +149,7 @@ export default function VerteNeverte({ teams, report, clearResult, statements, a
 
       <div className="vn-wrap">
         <div className="vn-card">
-          <div className="vn-cat">{cur.icon} {cur.category}</div>
+          <div className="vn-cat vn-cat-lg">{cur.icon} {cur.category}</div>
           <div className="vn-text">„{cur.text}"</div>
 
           {!revealed ? (

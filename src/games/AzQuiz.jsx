@@ -37,13 +37,13 @@ function teamConnects(owner, team, sidesNeeded) {
 export default function AzQuiz({ teams: draftTeams, report, clearResult, categories }) {
   const AZ_CATEGORIES = categories
   const [phase, setPhase] = useState('setup')
-  const [numTeams, setNumTeams] = useState(2)
   const [mode, setMode] = useState('classic') // classic (spoj 3 strany) | rychlovka
-  const [teams, setTeams] = useState([
+  // Tímy, farby aj počet (2) prichádzajú z losovania — nedajú sa tu meniť
+  const numTeams = 2
+  const teams = [
     { name: draftTeams?.[0]?.name || 'Tím 1', color: COLORS[0] },
     { name: draftTeams?.[1]?.name || 'Tím 2', color: COLORS[1] },
-    { name: 'Tím 3', color: COLORS[2] },
-  ])
+  ]
   const [owner, setOwner] = useState(() => Object.fromEntries([...Array(28)].map((_, i) => [i + 1, FREE])))
   const [cellCat, setCellCat] = useState({})
   const [turn, setTurn] = useState(0)
@@ -56,10 +56,6 @@ export default function AzQuiz({ teams: draftTeams, report, clearResult, categor
 
   function stopTimer() { clearInterval(timerRef.current); timerRef.current = null }
   useEffect(() => () => stopTimer(), [])
-
-  function setTeam(i, patch) {
-    setTeams((t) => t.map((x, j) => (j === i ? { ...x, ...patch } : x)))
-  }
 
   function start() {
     // priraď kategórie rovnomerne (round-robin), aby sa v jednej kategórii nevyčerpali otázky
@@ -144,15 +140,13 @@ export default function AzQuiz({ teams: draftTeams, report, clearResult, categor
     return (
       <main className="page">
         <div className="page-head"><img className="title-emote" src="/emotes/fudyPodelafka.png" alt="" /><h1>AZ Kvíz</h1><span className="pill">28 políčok · 9 kategórií</span></div>
-        <p className="page-sub">Nastav tímy a herný mód. Kategórie sa políčkam priradia náhodne a skryto.</p>
+        <p className="page-sub">Hrajú vylosované tímy. Vyber herný mód — kategórie sa políčkam priradia náhodne a skryto.</p>
 
         <div className="az-setup">
-          <div>
-            <p className="section-label">Počet tímov</p>
-            <div className="group" style={{ display: 'flex', gap: 10 }}>
-              <button className={'btn' + (numTeams === 2 ? ' btn-primary' : '')} onClick={() => { setNumTeams(2); if (mode !== 'rychlovka') setMode('classic') }}>2 tímy</button>
-              <button className={'btn' + (numTeams === 3 ? ' btn-primary' : '')} onClick={() => { setNumTeams(3); if (mode !== 'rychlovka') setMode('classic') }}>3 tímy</button>
-            </div>
+          <div className="az-teams-info">
+            {teams.map((t, i) => (
+              <span key={i} className="turn-pill"><span className="dot" style={{ background: t.color }} />{t.name}</span>
+            ))}
           </div>
 
           <div>
@@ -166,20 +160,6 @@ export default function AzQuiz({ teams: draftTeams, report, clearResult, categor
                 ? 'Žiadne prepájanie — vyhráva tím s najviac políčkami z 28 otázok.'
                 : 'Vyhráva tím, ktorý prvý spojí ľavú, pravú aj spodnú stranu súvislou reťazou svojich políčok.'}
             </p>
-          </div>
-
-          <div>
-            <p className="section-label">Tímy</p>
-            {teams.slice(0, numTeams).map((t, i) => (
-              <div className="team-edit" key={i} style={{ marginBottom: 10 }}>
-                <input type="text" value={t.name} onChange={(e) => setTeam(i, { name: e.target.value })} />
-                <div className="swatches">
-                  {COLORS.map((c) => (
-                    <button key={c} className={'swatch' + (t.color === c ? ' sel' : '')} style={{ background: c }} onClick={() => setTeam(i, { color: c })} />
-                  ))}
-                </div>
-              </div>
-            ))}
           </div>
 
           <button className="btn btn-primary btn-xl" onClick={start}>Spustiť hru →</button>
