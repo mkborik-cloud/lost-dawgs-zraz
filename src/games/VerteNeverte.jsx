@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 function shuffle(arr) {
   const a = [...arr]
@@ -9,7 +9,7 @@ function shuffle(arr) {
   return a
 }
 
-export default function VerteNeverte({ teams, report, clearResult, statements }) {
+export default function VerteNeverte({ teams, report, clearResult, statements, active }) {
   const VN_STATEMENTS = statements
   const TEAM_NAMES = teams.map((t) => t.name)
   const MEMBERS = teams.map((t) => t.members || [])
@@ -19,9 +19,41 @@ export default function VerteNeverte({ teams, report, clearResult, statements })
   const [scores, setScores] = useState([0, 0])
   const [revealed, setRevealed] = useState(false)
   const [phase, setPhase] = useState('play') // play | end
+  const [muted, setMuted] = useState(false)
+  const [volume, setVolume] = useState(0.4)
+  const audioRef = useRef(null)
+
+  // Hudba na pozadí (loop) — hrá, len keď je Verte/Neverte aktívna obrazovka
+  useEffect(() => {
+    const a = new Audio('/verte-neverte-theme.mp3')
+    a.loop = true
+    a.volume = 0.4
+    audioRef.current = a
+    return () => { a.pause(); audioRef.current = null }
+  }, [])
+  useEffect(() => {
+    const a = audioRef.current
+    if (!a) return
+    if (active && !muted) a.play().catch(() => {})
+    else a.pause()
+  }, [active, muted])
+  useEffect(() => { if (audioRef.current) audioRef.current.volume = volume }, [volume])
 
   const total = deck.length
   const cur = deck[pos]
+
+  const musicBtn = (
+    <span className="vn-music-ctrl">
+      <button className="btn btn-ghost" onClick={() => setMuted((m) => !m)} title="Hudba na pozadí">
+        {muted || volume === 0 ? '🔇' : '🎵'} Hudba
+      </button>
+      <input
+        type="range" min="0" max="1" step="0.05" value={muted ? 0 : volume}
+        onChange={(e) => { setVolume(Number(e.target.value)); setMuted(false) }}
+        title="Hlasitosť hudby"
+      />
+    </span>
+  )
 
   function award(which) {
     // which: 0 = Tím 1, 1 = Tím 2, 'both' = obaja, null = nikto
@@ -66,6 +98,7 @@ export default function VerteNeverte({ teams, report, clearResult, statements })
           </div>
           <div className="draft-actions" style={{ marginTop: 24 }}>
             <button className="btn btn-primary btn-xl" onClick={restart}>🔁 Hrať znova</button>
+            {musicBtn}
           </div>
         </div>
       </main>
@@ -87,7 +120,8 @@ export default function VerteNeverte({ teams, report, clearResult, statements })
   return (
     <main className="page">
       <div className="page-head" style={{ justifyContent: 'center' }}>
-        <h1>🤔 Verte alebo Neverte</h1>
+        <img className="title-emote" src="/emotes/tomkoDawg.png" alt="" />
+        <h1>Verte alebo Neverte</h1>
       </div>
 
       <div className="scorebar">
@@ -151,6 +185,7 @@ export default function VerteNeverte({ teams, report, clearResult, statements })
             <button className="btn btn-ghost" onClick={() => advance(scores)}>Preskočiť →</button>
             <button className="btn btn-green" onClick={() => advance(scores)} style={{ display: pos + 1 >= total ? 'inline-flex' : 'none' }}>🏁 Vyhodnotiť</button>
             <button className="btn btn-ghost" onClick={restart}>🔁 Reštartovať hru</button>
+            {musicBtn}
           </div>
         </div>
         <p className="mod-note">Tímy sa rozhodnú VERÍM / NEVERÍM, moderátor odhalí pravdu a pridelí bod.</p>

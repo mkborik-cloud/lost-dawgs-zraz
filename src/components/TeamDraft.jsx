@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { CAPTAINS, PLAYERS } from '../data/players.js'
 
+// Do žrebovania idú všetci hráči vrátane Fudyho a Myrella
+const POOL = [...CAPTAINS, ...PLAYERS]
+
 function shuffle(arr) {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
@@ -11,8 +14,8 @@ function shuffle(arr) {
 }
 
 export default function TeamDraft({ setTeams }) {
-  // Predvolene sú v žrebovaní všetci hráči; moderátor môže ktoréhokoľvek vyradiť klikom
   const [excluded, setExcluded] = useState(new Set())
+  const [names, setNames] = useState(['Tím 1', 'Tím 2']) // vlastné názvy tímov
   const [teamA, setTeamA] = useState([])
   const [teamB, setTeamB] = useState([])
   const [drawing, setDrawing] = useState(false)
@@ -27,13 +30,13 @@ export default function TeamDraft({ setTeams }) {
   const audioRef = useRef(null)
   const mutedRef = useRef(false)
 
-  const active = PLAYERS.filter((p) => !excluded.has(p))
+  const active = POOL.filter((p) => !excluded.has(p))
 
   function clearTimers() { clearInterval(timer.current); clearTimeout(timer.current) }
   useEffect(() => () => clearTimers(), [])
   useEffect(() => { mutedRef.current = muted }, [muted])
 
-  // ----- Web Audio (syntetizované zvuky, žiadne súbory) -----
+  // ----- Web Audio (syntetizované zvuky) -----
   function getCtx() {
     if (!audioRef.current) {
       const AC = window.AudioContext || window.webkitAudioContext
@@ -55,7 +58,7 @@ export default function TeamDraft({ setTeams }) {
   function playLock(team) {
     if (mutedRef.current) return
     const ctx = getCtx()
-    const freqs = team === 0 ? [660, 988] : [587, 880] // dve noty, podľa tímu
+    const freqs = team === 0 ? [660, 988] : [587, 880]
     freqs.forEach((f, idx) => {
       const o = ctx.createOscillator(); const g = ctx.createGain()
       o.type = 'triangle'; o.frequency.value = f
@@ -89,29 +92,52 @@ export default function TeamDraft({ setTeams }) {
     })
   }
 
+  // Náhodné rozdelenie so zaručenou podmienkou: Fudy a Myrell nie sú v tom istom tíme
+  function buildTeams() {
+    const rest = shuffle(active.filter((p) => p !== 'Fudy' && p !== 'Myrell'))
+    const A = [], B = []
+    const hasF = active.includes('Fudy'), hasM = active.includes('Myrell')
+    if (hasF && hasM) {
+      if (Math.random() < 0.5) { A.push('Fudy'); B.push('Myrell') }
+      else { A.push('Myrell'); B.push('Fudy') }
+    } else if (hasF) { (Math.random() < 0.5 ? A : B).push('Fudy') }
+    else if (hasM) { (Math.random() < 0.5 ? A : B).push('Myrell') }
+    for (const p of rest) {
+      if (A.length < B.length) A.push(p)
+      else if (B.length < A.length) B.push(p)
+      else (Math.random() < 0.5 ? A : B).push(p)
+    }
+    return { A, B }
+  }
+
   function draw() {
     clearTimers()
-    getCtx() // odomkni audio na kliknutie (user gesture)
-    const order = shuffle(active)
+    getCtx() // odomkni audio na kliknutie
+    const { A, B } = buildTeams()
+    // poradie odhaľovania: striedavo A, B
+    const seq = []
+    const maxLen = Math.max(A.length, B.length)
+    for (let i = 0; i < maxLen; i++) {
+      if (i < A.length) seq.push({ name: A[i], team: 0 })
+      if (i < B.length) seq.push({ name: B[i], team: 1 })
+    }
     setTeamA([]); setTeamB([]); setDone(false); setDrawing(true); setReveal(''); setLocked(false)
     let i = 0
 
-    // jeden los = roztočenie reelu, ktoré sa plynulo spomaľuje (ease-out), potom zacvakne vybraný hráč
     const step = () => {
-      if (i >= order.length) {
+      if (i >= seq.length) {
         setDrawing(false); setSpinning(false); setLocked(false); setDone(true); setReveal('')
-        const a = order.filter((_, idx) => idx % 2 === 0)
-        const b = order.filter((_, idx) => idx % 2 === 1)
         setTeams([
-          { name: CAPTAINS[0], captain: CAPTAINS[0], members: a, color: 't1' },
-          { name: CAPTAINS[1], captain: CAPTAINS[1], members: b, color: 't2' },
+          { name: names[0].trim() || 'Tím 1', members: A, color: 't1' },
+          { name: names[1].trim() || 'Tím 2', members: B, color: 't2' },
         ])
         playFanfare()
         return
       }
-      setTargetTeam(i % 2)
+      const { name, team } = seq[i]
+      setTargetTeam(team)
       setSpinning(true); setLocked(false)
-      const totalSpins = 9 + Math.floor(Math.random() * 4)
+      const totalSpins = 13 + Math.floor(Math.random() * 5)
       let s = 0
       const tick = () => {
         setReveal(active[Math.floor(Math.random() * active.length)])
@@ -119,19 +145,18 @@ export default function TeamDraft({ setTeams }) {
         playTick()
         s++
         if (s >= totalSpins) {
-          const name = order[i]
           setReveal(name); setSpinTick((n) => n + 1)
           setSpinning(false); setLocked(true)
-          playLock(i % 2)
-          if (i % 2 === 0) setTeamA((t) => [...t, name])
+          playLock(team)
+          if (team === 0) setTeamA((t) => [...t, name])
           else setTeamB((t) => [...t, name])
           i++
-          timer.current = setTimeout(() => { setLocked(false); step() }, 340)
+          timer.current = setTimeout(() => { setLocked(false); step() }, 460)
           return
         }
-        // ease-out: rýchlo na začiatku (~32 ms), postupne spomalí (~135 ms) na konci
+        // plynulejšie spomaľovanie: pomalší štart (~70 ms) a jemný ease-out do ~260 ms
         const p = s / totalSpins
-        const delay = 32 + Math.pow(p, 2.3) * 105
+        const delay = 70 + Math.pow(p, 2) * 190
         timer.current = setTimeout(tick, delay)
       }
       tick()
@@ -144,12 +169,13 @@ export default function TeamDraft({ setTeams }) {
     setTeamA([]); setTeamB([]); setDrawing(false); setDone(false); setReveal('')
     setSpinning(false); setLocked(false)
     setTeams([
-      { name: CAPTAINS[0], captain: CAPTAINS[0], members: [], color: 't1' },
-      { name: CAPTAINS[1], captain: CAPTAINS[1], members: [], color: 't2' },
+      { name: 'Tím 1', members: [], color: 't1' },
+      { name: 'Tím 2', members: [], color: 't2' },
     ])
   }
 
   const started = drawing || done
+  const displayNames = [names[0].trim() || 'Tím 1', names[1].trim() || 'Tím 2']
 
   return (
     <main className="page">
@@ -157,16 +183,27 @@ export default function TeamDraft({ setTeams }) {
         <h1>Rozdelenie tímov</h1>
         <span className="pill">🎲 Losovanie</span>
       </div>
-      <p className="page-sub">
-        Kapitáni sú pevne dané — <b>Fudy</b> a <b>Myrell</b>. Ostatní hráči sa rozdelia náhodne,
-        striedavo do oboch tímov. Pred losovaním môžeš vyradiť hráča (napr. neistú účasť).
-      </p>
 
       {!started && (
         <>
-          <p className="section-label">Hráči v žrebovaní ({active.length})</p>
+          <p className="section-label" style={{ textAlign: 'center' }}>Názvy tímov</p>
+          <div className="name-inputs" style={{ justifyContent: 'center' }}>
+            <input
+              className="cfg-input" style={{ maxWidth: 260 }}
+              value={names[0]} onChange={(e) => setNames([e.target.value, names[1]])}
+              placeholder="Tím 1"
+            />
+            <span className="vs" style={{ color: 'var(--muted)', fontWeight: 800 }}>vs</span>
+            <input
+              className="cfg-input" style={{ maxWidth: 260 }}
+              value={names[1]} onChange={(e) => setNames([names[0], e.target.value])}
+              placeholder="Tím 2"
+            />
+          </div>
+
+          <p className="section-label" style={{ marginTop: 22 }}>Hráči v žrebovaní ({active.length})</p>
           <div className="pool">
-            {PLAYERS.map((p) => (
+            {POOL.map((p) => (
               <button
                 key={p}
                 className={'pool-chip' + (excluded.has(p) ? ' picked' : '')}
@@ -179,7 +216,7 @@ export default function TeamDraft({ setTeams }) {
           </div>
           <div className="draft-actions">
             <button className="btn btn-primary btn-xl" onClick={draw} disabled={active.length < 2}>
-              🎲 Vylosovať tímy
+              🎲 Generovať
             </button>
             <button className="btn btn-lg" onClick={() => setMuted((m) => !m)} title="Zvuk losovania">
               {muted ? '🔇 Zvuk vyp.' : '🔊 Zvuk zap.'}
@@ -195,7 +232,7 @@ export default function TeamDraft({ setTeams }) {
           ) : (
             <div className="slot">
               <div className="slot-target" style={{ color: targetTeam === 0 ? 'var(--t1)' : 'var(--t2)' }}>
-                {drawing ? <>→ do tímu <b>{CAPTAINS[targetTeam]}</b></> : ' '}
+                {drawing ? <>→ do tímu <b>{displayNames[targetTeam]}</b></> : ' '}
               </div>
               <div
                 className={'slot-name' + (spinning ? ' spinning' : '') + (locked ? ' locked' : '')}
@@ -208,14 +245,14 @@ export default function TeamDraft({ setTeams }) {
           <div className="draft-grid">
             <div className="draft-team a">
               <div className="cap">
-                <span className="crown">👑</span>
+                <span className="crown">🔵</span>
                 <div>
-                  <div className="nm">{CAPTAINS[0]}</div>
-                  <div className="role">Kapitán · Tím 1</div>
+                  <div className="nm">{displayNames[0]}</div>
+                  <div className="role">Tím 1</div>
                 </div>
                 <div className="spacer" style={{ flex: 1 }} />
                 <span className="num" style={{ position: 'static', color: 'var(--t1)', fontSize: 30 }}>
-                  {teamA.length + 1}
+                  {teamA.length}
                 </span>
               </div>
               <div className="draft-list">
@@ -229,14 +266,14 @@ export default function TeamDraft({ setTeams }) {
 
             <div className="draft-team b">
               <div className="cap">
-                <span className="crown">👑</span>
+                <span className="crown">🔴</span>
                 <div>
-                  <div className="nm">{CAPTAINS[1]}</div>
-                  <div className="role">Kapitán · Tím 2</div>
+                  <div className="nm">{displayNames[1]}</div>
+                  <div className="role">Tím 2</div>
                 </div>
                 <div className="spacer" style={{ flex: 1 }} />
                 <span className="num" style={{ position: 'static', color: 'var(--t2)', fontSize: 30 }}>
-                  {teamB.length + 1}
+                  {teamB.length}
                 </span>
               </div>
               <div className="draft-list">

@@ -149,6 +149,10 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
   /* ---------- PLAY ---------- */
   return (
     <main className="page page-wide">
+      <div className="page-head">
+        <img className="title-emote" src="/emotes/antyApprove.png" alt="" />
+        <h1>5 proti 5</h1>
+      </div>
       <Scoreboard />
 
       <div className="feud-question">

@@ -20,3 +20,7 @@ Thumbs.db
 
 # Claude Code local config
 .claude/
+
+# Archives (zdrojové balíky emotov)
+*.rar
+*.zip

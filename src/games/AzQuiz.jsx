@@ -48,7 +48,7 @@ export default function AzQuiz({ teams: draftTeams, report, clearResult, categor
   const [cellCat, setCellCat] = useState({})
   const [turn, setTurn] = useState(0)
   const [modal, setModal] = useState(null) // {cell, catId, q, a}
-  const [used, setUsed] = useState({}) // catId -> Set of question idx
+  const [used, setUsed] = useState(() => new Set()) // globálne použité otázky "catId:qIdx" — bez opakovania
   const [winner, setWinner] = useState(null)
   const [revealed, setRevealed] = useState(false) // odhalená odpoveď v modáli
   const [timeLeft, setTimeLeft] = useState(ANSWER_TIME)
@@ -62,13 +62,14 @@ export default function AzQuiz({ teams: draftTeams, report, clearResult, categor
   }
 
   function start() {
-    // priraď každému políčku náhodnú kategóriu (skryté)
-    const cats = AZ_CATEGORIES.map((c) => c.id)
+    // priraď kategórie rovnomerne (round-robin), aby sa v jednej kategórii nevyčerpali otázky
+    const shuffledCats = shuffle(AZ_CATEGORIES.map((c) => c.id))
+    const assign = shuffle([...Array(28)].map((_, i) => shuffledCats[i % shuffledCats.length]))
     const map = {}
-    for (let c = 1; c <= 28; c++) map[c] = cats[Math.floor(Math.random() * cats.length)]
+    for (let c = 1; c <= 28; c++) map[c] = assign[c - 1]
     setCellCat(map)
     setOwner(Object.fromEntries([...Array(28)].map((_, i) => [i + 1, FREE])))
-    setUsed({}); setTurn(0); setWinner(null); setPhase('play')
+    setUsed(new Set()); setTurn(0); setWinner(null); setPhase('play')
     clearResult() // nová hra → výsledok disciplíny sa zatiaľ vynuluje
   }
 
@@ -76,11 +77,15 @@ export default function AzQuiz({ teams: draftTeams, report, clearResult, categor
     if (winner || owner[cell] >= 0) return // už obsadené
     const catId = cellCat[cell]
     const cat = AZ_CATEGORIES.find((c) => c.id === catId)
-    const usedSet = used[catId] || new Set()
-    let pool = cat.questions.map((q, i) => ({ q, i })).filter((x) => !usedSet.has(x.i))
-    if (pool.length === 0) pool = cat.questions.map((q, i) => ({ q, i }))
-    const pick = pool[Math.floor(Math.random() * pool.length)]
-    setModal({ cell, catId, icon: cat.icon, label: cat.label, qIdx: pick.i, ...pick.q })
+    const isUsed = (cid, i) => used.has(cid + ':' + i)
+    // najprv nepoužité otázky z pridelenej kategórie; ak sú vyčerpané, požičaj z inej (bez opakovania)
+    let candidates = cat.questions.map((q, i) => ({ cat, q, i })).filter((x) => !isUsed(catId, x.i))
+    if (candidates.length === 0) {
+      candidates = AZ_CATEGORIES.flatMap((c) => c.questions.map((q, i) => ({ cat: c, q, i })).filter((x) => !isUsed(c.id, x.i)))
+    }
+    if (candidates.length === 0) return // všetky otázky vyčerpané (pri 72 otázkach a 28 políčkach nenastane)
+    const pick = candidates[Math.floor(Math.random() * candidates.length)]
+    setModal({ cell, catId: pick.cat.id, icon: pick.cat.icon, label: pick.cat.label, qIdx: pick.i, ...pick.q })
     // spusti 30s odpočet — odpoveď sa odhalí až po čase (alebo skôr cez tlačidlo)
     setRevealed(false); setTimeLeft(ANSWER_TIME)
     stopTimer()
@@ -100,7 +105,7 @@ export default function AzQuiz({ teams: draftTeams, report, clearResult, categor
     stopTimer()
     const nextOwner = { ...owner, [cell]: correct ? turn : BLOCKED }
     setOwner(nextOwner)
-    setUsed((u) => ({ ...u, [catId]: new Set([...(u[catId] || []), qIdx]) }))
+    setUsed((u) => new Set(u).add(catId + ':' + qIdx)) // označ otázku ako použitú (nezopakuje sa)
     setModal(null)
 
     // detekcia výhry
@@ -138,7 +143,7 @@ export default function AzQuiz({ teams: draftTeams, report, clearResult, categor
   if (phase === 'setup') {
     return (
       <main className="page">
-        <div className="page-head"><h1>🔺 AZ Kvíz</h1><span className="pill">28 políčok · 9 kategórií</span></div>
+        <div className="page-head"><img className="title-emote" src="/emotes/fudyPodelafka.png" alt="" /><h1>AZ Kvíz</h1><span className="pill">28 políčok · 9 kategórií</span></div>
         <p className="page-sub">Nastav tímy a herný mód. Kategórie sa políčkam priradia náhodne a skryto.</p>
 
         <div className="az-setup">
@@ -207,7 +212,7 @@ export default function AzQuiz({ teams: draftTeams, report, clearResult, categor
 
   return (
     <main className="page">
-      <div className="page-head"><h1>🔺 AZ Kvíz</h1><span className="pill">{mode === 'rychlovka' ? 'Rýchlovka' : 'Spoj 3 strany'}</span></div>
+      <div className="page-head"><img className="title-emote" src="/emotes/fudyPodelafka.png" alt="" /><h1>AZ Kvíz</h1><span className="pill">{mode === 'rychlovka' ? 'Rýchlovka' : 'Spoj 3 strany'}</span></div>
 
       <div className="az-turn">
         {teams.slice(0, numTeams).map((t, i) => (
@@ -240,7 +245,7 @@ export default function AzQuiz({ teams: draftTeams, report, clearResult, categor
 
       <div className="az-legend">
         <span><i className="dot" style={{ background: '#2a2a32' }} /> voľné (číslo)</span>
-        <span><i className="dot" style={{ background: 'repeating-linear-gradient(45deg,#2a2a30,#2a2a30 4px,#202026 4px,#202026 8px)' }} /> zablokované (✕)</span>
+        <span><i className="dot" style={{ background: '#f5f5f7', color: 'var(--red)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 12, boxShadow: 'inset 0 0 0 1.5px var(--red)' }}>✕</i> zablokované</span>
         {teams.slice(0, numTeams).map((t, i) => (
           <span key={i}><i className="dot" style={{ background: t.color }} /> {t.name}</span>
         ))}

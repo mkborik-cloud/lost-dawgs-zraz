@@ -17,6 +17,7 @@ export default function EmojiBoss({ teams, report, clearResult, categories }) {
   const TEAM_NAMES = teams.map((t) => t.name)
   const MEMBERS = teams.map((t) => t.members || [])
   const [scores, setScores] = useState([0, 0])
+  const [turn, setTurn] = useState(0) // ktorý tím je na ťahu (striedajú sa)
   const [catId, setCatId] = useState('all')
   const [queue, setQueue] = useState(() => shuffle(allItems()))
   const [pos, setPos] = useState(0)
@@ -46,12 +47,21 @@ export default function EmojiBoss({ teams, report, clearResult, categories }) {
     next()
   }
 
+  // Tímy sa striedajú: tím na ťahu buď uhádol (+1), alebo nie — potom ide druhý tím
+  function resolveTurn(correct) {
+    if (correct) setScores((s) => { const n = [...s]; n[turn]++; return n })
+    setTurn((t) => 1 - t)
+    next()
+  }
+
   function next() {
     setRevealed(false)
     setPos((p) => (total ? (p + 1) % total : 0)) // wrap around — appka beží dokola
   }
 
-  function reset() { setScores([0, 0]); pickCat('all'); setPhase('play'); clearResult() }
+  function skip() { setTurn((t) => 1 - t); next() }
+
+  function reset() { setScores([0, 0]); setTurn(0); pickCat('all'); setPhase('play'); clearResult() }
 
   function finish() {
     const w = scores[0] === scores[1] ? 'tie' : scores[0] > scores[1] ? 0 : 1
@@ -89,13 +99,14 @@ export default function EmojiBoss({ teams, report, clearResult, categories }) {
   return (
     <main className="page">
       <div className="page-head">
-        <h1>🧩 Emoji Boss</h1>
+        <img className="title-emote" src="/emotes/zemlaKEK.png" alt="" />
+        <h1>Emoji Boss</h1>
         <span className="pill">World of Warcraft</span>
       </div>
-      <p className="page-sub">Moderátor ukáže reťazec emoji, tímy hádajú nahlas. Klikni „Odhaliť" a prideľ bod.</p>
+      <p className="page-sub">Tímy sa <b>striedajú na ťahu</b> — háda tím na ťahu, moderátor odhalí odpoveď a označí, či uhádol. Potom ide druhý tím.</p>
 
       <div className="scorebar">
-        <div className="team-score t1">
+        <div className={'team-score t1' + (!finalMode && turn === 0 ? ' active' : '')}>
           <div className="ts-info">
             <span className="name" style={{ color: 'var(--t1)' }}>{TEAM_NAMES[0]}</span>
             {MEMBERS[0].length > 0 && <span className="members">{MEMBERS[0].join(' · ')}</span>}
@@ -106,7 +117,7 @@ export default function EmojiBoss({ teams, report, clearResult, categories }) {
           <span className="vs">OTÁZKA</span>
           <span style={{ fontSize: 28, fontWeight: 900 }}>{finalMode ? '★' : pos + 1}<span style={{ color: 'var(--muted)', fontSize: 16 }}>{finalMode ? '' : '/' + total}</span></span>
         </div>
-        <div className="team-score t2">
+        <div className={'team-score t2' + (!finalMode && turn === 1 ? ' active' : '')}>
           <span className="pts">{scores[1]}</span>
           <div className="ts-info">
             <span className="name" style={{ color: 'var(--t2)' }}>{TEAM_NAMES[1]}</span>
@@ -114,6 +125,23 @@ export default function EmojiBoss({ teams, report, clearResult, categories }) {
           </div>
         </div>
       </div>
+
+      {!finalMode && (
+        <div className="az-turn" style={{ marginBottom: 18 }}>
+          {TEAM_NAMES.map((nm, i) => (
+            <button
+              key={i}
+              className={'turn-pill' + (turn === i ? ' active' : '')}
+              style={turn === i ? { borderColor: i === 0 ? 'var(--t1)' : 'var(--t2)' } : {}}
+              onClick={() => setTurn(i)}
+            >
+              <span className="dot" style={{ background: i === 0 ? 'var(--t1)' : 'var(--t2)' }} />
+              {nm}
+              {turn === i && <span style={{ color: i === 0 ? 'var(--t1)' : 'var(--t2)' }}>← na ťahu</span>}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="cat-chips">
         {catList.map((c) => (
@@ -135,17 +163,11 @@ export default function EmojiBoss({ teams, report, clearResult, categories }) {
 
       {finalMode ? (
         <div className="emoji-stage">
-          <div className="vn-cat" style={{ color: 'var(--gold)' }}>Finálna otázka rozstrelu</div>
+          <div className="vn-cat" style={{ color: 'var(--gold)' }}>🏆 Finálna otázka rozstrelu</div>
           <div className="emoji-string">{EMOJI_FINAL.emoji}</div>
-          <div style={{ fontSize: 22, fontWeight: 700, maxWidth: 620 }}>{EMOJI_FINAL.question}</div>
-          {revealed ? (
-            <div className="emoji-answer">
-              {EMOJI_FINAL.answer}
-              <small>{EMOJI_FINAL.note}</small>
-            </div>
-          ) : (
-            <div className="emoji-hidden">❓ ❓ ❓</div>
-          )}
+          {revealed
+            ? <div className="emoji-answer">{EMOJI_FINAL.answer}</div>
+            : <div className="emoji-hidden">❓ ❓ ❓</div>}
         </div>
       ) : cur ? (
         <div className="emoji-stage">
@@ -167,18 +189,26 @@ export default function EmojiBoss({ teams, report, clearResult, categories }) {
         <div className="label">Ovládanie moderátora</div>
         {!revealed ? (
           <button className="btn btn-primary btn-lg" onClick={() => setRevealed(true)} disabled={!finalMode && !cur}>👁️ Odhaliť odpoveď</button>
-        ) : (
+        ) : finalMode ? (
           <div className="group">
             <span style={{ color: 'var(--muted)', fontSize: 14 }}>Bod pre:</span>
             <button className="btn btn-blue" onClick={() => award(0)}>{TEAM_NAMES[0]}</button>
             <button className="btn btn-primary" onClick={() => award(1)}>{TEAM_NAMES[1]}</button>
             <button className="btn" onClick={() => award(null)}>Nikto</button>
-            {finalMode && <button className="btn btn-ghost" onClick={() => { setFinalMode(false); setRevealed(false) }}>← Späť do hry</button>}
+            <button className="btn btn-ghost" onClick={() => { setFinalMode(false); setRevealed(false) }}>← Späť do hry</button>
+          </div>
+        ) : (
+          <div className="group">
+            <span style={{ color: 'var(--muted)', fontSize: 14 }}>
+              <b style={{ color: turn === 0 ? 'var(--t1)' : 'var(--t2)' }}>{TEAM_NAMES[turn]}</b> na ťahu:
+            </span>
+            <button className="btn btn-green" onClick={() => resolveTurn(true)}>✔ Uhádol (+1)</button>
+            <button className="btn" onClick={() => resolveTurn(false)}>✗ Neuhádol</button>
           </div>
         )}
         <div className="divider" />
         <div className="group">
-          {!finalMode && <button className="btn btn-ghost" onClick={next}>Preskočiť →</button>}
+          {!finalMode && <button className="btn btn-ghost" onClick={skip}>Preskočiť →</button>}
           <button className="btn btn-green" onClick={finish}>🏁 Ukončiť a vyhodnotiť</button>
           <button className="btn btn-ghost" onClick={reset}>🔁 Reštartovať hru</button>
         </div>

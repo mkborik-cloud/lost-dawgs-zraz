@@ -1,24 +1,24 @@
 const GAMES = [
   {
-    key: 'feud', n: '01', emoji: '📺', title: '5 proti 5',
+    key: 'feud', n: '01', emoji: '📺', img: '/emotes/antyApprove.png', title: '5 proti 5',
     tag: 'Family Feud',
     desc: 'Dva tímy hádajú najčastejšie odpovede z ankety. Krížiky, kradnutie bodov, 9 kôl s násobičmi.',
     accent: 'var(--red)', soft: 'rgba(240,64,74,0.16)', glow: 'rgba(240,64,74,0.5)',
   },
   {
-    key: 'emoji', n: '02', emoji: '🧩', title: 'Emoji Boss',
+    key: 'emoji', n: '02', emoji: '🧩', img: '/emotes/zemlaKEK.png', title: 'Emoji Boss',
     tag: 'World of Warcraft',
     desc: 'Reťazec emoji → uhádni bossa, zónu, expanziu či postavu. Od základov až po rozstrel.',
     accent: '#c77dff', soft: 'rgba(199,125,255,0.16)', glow: 'rgba(199,125,255,0.5)',
   },
   {
-    key: 'az', n: '03', emoji: '🔺', title: 'AZ Kvíz',
+    key: 'az', n: '03', emoji: '🔺', img: '/emotes/fudyPodelafka.png', title: 'AZ Kvíz',
     tag: '28 políčok · 9 kategórií',
     desc: 'Trojuholníková doska. Tímy odpovedajú a snažia sa prepojiť svoje strany súvislou reťazou.',
     accent: '#4d8df0', soft: 'rgba(77,141,240,0.16)', glow: 'rgba(77,141,240,0.5)',
   },
   {
-    key: 'vn', n: '04', emoji: '🤔', title: 'Verte / Neverte',
+    key: 'vn', n: '04', emoji: '🤔', img: '/emotes/tomkoDawg.png', title: 'Verte / Neverte',
     tag: '36 tvrdení',
     desc: 'Pravda alebo blud? Konšpirácie, Zem, história a slávne osobnosti — s vysvetlením.',
     accent: 'var(--gold)', soft: 'rgba(245,197,24,0.16)', glow: 'rgba(245,197,24,0.45)',
@@ -37,23 +37,11 @@ function SideTeam({ team, teamIndex, results, side }) {
       <div className="st-members">
         {team.members.join(' · ')}
       </div>
-      <div className="st-results">
-        {GAMES.map((g) => {
-          const r = results[g.key]
-          const state = r == null ? 'none' : r === 'tie' ? 'tie' : r === teamIndex ? 'win' : 'loss'
-          const mark = state === 'win' ? '✓' : state === 'loss' ? '✗' : state === 'tie' ? '=' : '–'
-          return (
-            <span className={'res-badge ' + state} key={g.key} title={g.title}>
-              <span className="rb-ico">{g.emoji}</span><span className="rb-mark">{mark}</span>
-            </span>
-          )
-        })}
-      </div>
     </div>
   )
 }
 
-export default function Home({ go, teams, drafted, results, resetTeams }) {
+export default function Home({ go, teams, drafted, results, resetTeams, resetAll }) {
   return (
     <main className="hub">
       <section className="hero">
@@ -78,7 +66,6 @@ export default function Home({ go, teams, drafted, results, resetTeams }) {
         <span className="big">🎲</span>
         <div>
           <h3>Rozdelenie tímov</h3>
-          <p>Kapitáni Fudy a Myrell, zvyšok sa vylosuje náhodne. {drafted ? 'Klikni pre úpravu / nové losovanie.' : 'Začni tu.'}</p>
         </div>
         <div className="spacer" />
         {drafted && (
@@ -90,7 +77,7 @@ export default function Home({ go, teams, drafted, results, resetTeams }) {
           </button>
         )}
         <button className="btn btn-primary btn-lg" onClick={(e) => { e.stopPropagation(); go('draft') }}>
-          {drafted ? 'Upraviť tímy →' : 'Losovať tímy →'}
+          {drafted ? 'Upraviť tímy' : 'Losovať tímy'}
         </button>
       </div>
 
@@ -104,12 +91,21 @@ export default function Home({ go, teams, drafted, results, resetTeams }) {
             style={{ '--accent': g.accent, '--accent-soft': g.soft, '--red-glow': g.glow }}
           >
             <span className="num">{g.n}</span>
-            <span className="emoji">{g.emoji}</span>
+            <img className="card-emote" src={g.img} alt="" />
             <h3>{g.title}</h3>
-            <p>{g.desc}</p>
+            <div style={{ flex: 1 }} />
             <span className="tag" style={{ '--accent': g.accent, '--accent-soft': g.soft }}>{g.tag}</span>
           </button>
         ))}
+      </div>
+
+      <div className="reset-all-row">
+        <button
+          className="btn btn-ghost reset-all-btn"
+          onClick={() => { if (confirm('Naozaj resetovať CELÚ hru? Vymažú sa tímy, výsledky disciplín aj priebeh všetkých hier.')) resetAll() }}
+        >
+          ↺ Resetovať celú hru
+        </button>
       </div>
     </main>
   )

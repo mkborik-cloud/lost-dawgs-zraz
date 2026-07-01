@@ -185,10 +185,8 @@ export const EMOJI_CATEGORIES = [
   },
 ]
 
-// Finálna otázka rozstrelu (rozseknutie remízy)
+// Finálna otázka rozstrelu (rozseknutie remízy) — emoji reťazec → odpoveď
 export const EMOJI_FINAL = {
-  emoji: '✨🌑 ⚖️ 🌿💀 ⚖️ 🔵🔥',
-  question: 'Vymenuj všetkých 6 kozmických síl WoW (v 3 opozičných pároch).',
-  answer: 'Light ↔ Void, Order ↔ Disorder, Life ↔ Death',
-  note: 'Kto to vymenuje celé bez zaváhania, je hoden titulu Loremaster of the Zraz.',
+  emoji: '⚡ 😡 🙏✨ 🗡️ 💨 🔍',
+  answer: 'Thunderfury, Blessed Blade of the Windseeker',
 }

@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react'
 import Home from './components/Home.jsx'
 import TeamDraft from './components/TeamDraft.jsx'
 import Settings from './components/Settings.jsx'
+import EmoteBackground from './components/EmoteBackground.jsx'
 import FamilyFeud from './games/FamilyFeud.jsx'
 import EmojiBoss from './games/EmojiBoss.jsx'
 import AzQuiz from './games/AzQuiz.jsx'
 import VerteNeverte from './games/VerteNeverte.jsx'
-import { CAPTAINS } from './data/players.js'
 import { GAMESET_1, GAMESET_2, FEUD_QUESTIONS } from './data/familyFeud.js'
 import { EMOJI_CATEGORIES } from './data/emoji.js'
 import { AZ_CATEGORIES } from './data/azquiz.js'
@@ -28,13 +28,18 @@ function loadGameData() {
 }
 
 function freshTeams() {
-  return CAPTAINS.map((name, i) => ({ name, captain: name, members: [], color: i === 0 ? 't1' : 't2' }))
+  // Tímy s generickými názvami; členov aj názvy doplní losovanie v Rozdelení tímov
+  return [
+    { name: 'Tím 1', members: [], color: 't1' },
+    { name: 'Tím 2', members: [], color: 't2' },
+  ]
 }
 
 export default function App() {
   const [screen, setScreen] = useState('home')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [draftKey, setDraftKey] = useState(0) // zmena => remount TeamDraft (čistý stav losovania)
+  const [gameKey, setGameKey] = useState(0) // zmena => remount všetkých hier (reset priebehu)
 
   // Editovateľné banky otázok (cez ⚙️ Nastavenia), uložené v localStorage
   const [gameData, setGameData] = useState(loadGameData)
@@ -55,6 +60,18 @@ export default function App() {
   const report = (key) => (winner) => setResults((r) => ({ ...r, [key]: winner }))
   const clearResult = (key) => () => setResults((r) => ({ ...r, [key]: null }))
 
+  // Reset celej hry — tímy, výsledky disciplín aj priebeh všetkých hier (#7)
+  const resetAll = () => {
+    setTeams(freshTeams())
+    setResults({ feud: null, emoji: null, az: null, vn: null })
+    setFeudGameset(null)
+    setDraftKey((k) => k + 1)
+    setGameKey((k) => k + 1)
+    setSettingsOpen(false)
+    setScreen('home')
+    window.scrollTo(0, 0)
+  }
+
   const go = (s) => {
     // Intercept feud → show gameset selector first
     const dest = s === 'feud' ? 'feud-select' : s
@@ -63,6 +80,8 @@ export default function App() {
   const startFeud = (gs) => { setFeudGameset(gs); setScreen('feud'); window.scrollTo(0, 0) }
 
   return (
+    <>
+    <EmoteBackground />
     <div className="app">
       <header className="topbar">
         <img className="logo" src="/logo.png" alt="Lost Dawgs" />
@@ -83,7 +102,7 @@ export default function App() {
       {/* Všetky obrazovky ostávajú namountované — prepína sa len viditeľnosť,
           takže rozohraná hra si pamätá presný stav aj po návrate do hubu. */}
       <div style={{ display: screen === 'home' ? 'block' : 'none' }}>
-        <Home go={go} teams={teams} drafted={drafted} results={results} resetTeams={resetTeams} />
+        <Home go={go} teams={teams} drafted={drafted} results={results} resetTeams={resetTeams} resetAll={resetAll} />
       </div>
       <div style={{ display: screen === 'draft' ? 'block' : 'none' }}>
         <TeamDraft key={draftKey} setTeams={setTeams} />
@@ -104,7 +123,7 @@ export default function App() {
       </div>
       <div style={{ display: screen === 'feud' ? 'block' : 'none' }}>
         <FamilyFeud
-          key={feudGameset}
+          key={`${gameKey}-${feudGameset}`}
           teams={teams}
           report={report('feud')}
           clearResult={clearResult('feud')}
@@ -112,17 +131,17 @@ export default function App() {
         />
       </div>
       <div style={{ display: screen === 'emoji' ? 'block' : 'none' }}>
-        <EmojiBoss teams={teams} report={report('emoji')} clearResult={clearResult('emoji')} categories={gameData.emoji} />
+        <EmojiBoss key={gameKey} teams={teams} report={report('emoji')} clearResult={clearResult('emoji')} categories={gameData.emoji} />
       </div>
       <div style={{ display: screen === 'az' ? 'block' : 'none' }}>
-        <AzQuiz teams={teams} report={report('az')} clearResult={clearResult('az')} categories={gameData.az} />
+        <AzQuiz key={gameKey} teams={teams} report={report('az')} clearResult={clearResult('az')} categories={gameData.az} />
       </div>
       <div style={{ display: screen === 'vn' ? 'block' : 'none' }}>
-        <VerteNeverte teams={teams} report={report('vn')} clearResult={clearResult('vn')} statements={gameData.vn} />
+        <VerteNeverte key={gameKey} teams={teams} report={report('vn')} clearResult={clearResult('vn')} statements={gameData.vn} active={screen === 'vn'} />
       </div>
 
       <footer className="footer">
-        Lost Dawgs · Zraz 2026 Showdown — ovláda moderátor na veľkej obrazovke 🐺
+        Lost Dawgs · Zraz 2026 Showdown
       </footer>
 
       <button className="settings-fab" onClick={() => setSettingsOpen(true)} title="Nastavenia otázok">⚙️</button>
@@ -130,5 +149,6 @@ export default function App() {
         <Settings data={gameData} setData={setGameData} resetData={resetData} onClose={() => setSettingsOpen(false)} />
       )}
     </div>
+    </>
   )
 }
