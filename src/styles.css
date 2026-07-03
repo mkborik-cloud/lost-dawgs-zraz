@@ -169,6 +169,13 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .vn-music-ctrl { display: inline-flex; align-items: center; gap: 10px; }
 .vn-music-ctrl input[type=range] { accent-color: var(--red); width: 120px; cursor: pointer; }
 
+/* Family Feud — obrazovka štart kola */
+.feud-intro { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 22px; padding: 30px 20px 50px; }
+.feud-intro-logo { max-width: 560px; width: 92%; border-radius: 20px; filter: drop-shadow(0 14px 44px rgba(240,64,74,0.35)); }
+.feud-intro-round { font-size: 46px; font-weight: 900; letter-spacing: -0.02em; }
+.feud-intro-round span { color: var(--muted); font-size: 30px; }
+.feud-intro-mult { font-size: 17px; color: var(--gold); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; margin-top: -8px; }
+
 /* Family Feud — moderátorský prehľad odpovedí */
 .mod-panel { border: 1px dashed var(--line-strong); border-radius: var(--r); background: rgba(245,197,24,0.04); margin-bottom: 22px; overflow: hidden; }
 .mod-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: rgba(255,255,255,0.03); flex-wrap: wrap; }
@@ -193,6 +200,20 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .feud-mod-question .cat { display: block; font-size: 13px; color: var(--red-bright); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; font-weight: 800; }
 .fm-hint { color: var(--muted); font-size: 13px; text-align: center; margin-bottom: 14px; }
 .fm-answers { grid-template-columns: 1fr; padding: 0; }
+.fm-block { padding: 24px 10px; }
+.fm-row-info { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; margin: 12px 0; }
+.fm-strikes { color: var(--red-bright); font-weight: 800; font-size: 15px; }
+.fm-lbl { color: var(--muted); font-size: 14px; }
+.feud-mod-page .controls .group { justify-content: flex-start; }
+/* stav odhalenia + otázka/odpoveď v moderátorskom okne (mimo .modal) */
+.fm-reveal-badge { font-size: 13px; font-weight: 800; letter-spacing: 0.04em; padding: 6px 12px; border-radius: 99px; align-self: center; }
+.fm-reveal-badge.on { color: var(--green); background: rgba(63,185,80,0.12); border: 1px solid var(--green); }
+.fm-reveal-badge.off { color: var(--muted); background: var(--bg-2); border: 1px solid var(--line); }
+.feud-mod-page .q-cat { font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--red-bright); font-weight: 800; }
+.feud-mod-page .q-text { font-size: 22px; font-weight: 800; margin: 10px 0; line-height: 1.25; }
+.feud-mod-page .q-answer { background: rgba(245,197,24,0.1); border: 1px solid var(--gold); color: var(--gold); border-radius: var(--r-sm); padding: 12px 16px; font-size: 20px; font-weight: 800; }
+.feud-mod-page .q-answer .lab { display: block; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; font-weight: 700; }
+.feud-mod-page .actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
 .card-game .emoji { font-size: 42px; }
 .card-game .card-emote { width: 60px; height: 60px; object-fit: contain; border-radius: 12px; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4)); }
@@ -430,6 +451,13 @@ button { font-family: inherit; cursor: pointer; border: none; }
 }
 .hex.blocked .shape { background: #f5f5f7; color: var(--red); font-size: 40px; font-weight: 900; box-shadow: inset 0 0 0 2px var(--red); text-shadow: none; }
 .hex.owned .shape { box-shadow: inset 0 0 0 3px rgba(255,255,255,0.25); color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
+/* kompaktná mini-doska v moderátorskom okne */
+.mod-az .hex { width: 50px; height: 56px; }
+.mod-az .hex .shape { font-size: 16px; }
+.mod-az .hex.blocked .shape { font-size: 20px; }
+.mod-az.az-row + .az-row, .mod-az .az-row + .az-row { margin-top: -12px; }
+.mod-az .hex:disabled { cursor: default; }
+.mod-az .hex:disabled:hover { transform: none; }
 .az-setup { display: flex; flex-direction: column; gap: 22px; max-width: 560px; margin: 0 auto; }
 .az-teams-info { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .team-edit { display: flex; align-items: center; gap: 14px; background: var(--card); border: 1px solid var(--line); padding: 14px 18px; border-radius: var(--r-sm); }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useModeratorHost, openModeratorWindow } from '../utils/moderatorSync.js'
 
 function shuffle(arr) {
   const a = [...arr]
@@ -78,6 +79,19 @@ export default function VerteNeverte({ teams, report, clearResult, statements, a
     setDeck(shuffle(VN_STATEMENTS)); setPos(0); setScores([0, 0]); setRevealed(false); setPhase('play')
     clearResult()
   }
+
+  // ---- Moderátorské okno (na laptope) ----
+  useModeratorHost('lostdawgs-vn', {
+    phase, revealed, pos, total, scores, teamNames: TEAM_NAMES,
+    cur: cur ? { category: cur.category, icon: cur.icon, text: cur.text, truth: cur.truth, explanation: cur.explanation } : null,
+    isLast: pos + 1 >= total,
+  }, {
+    reveal: () => setRevealed(true),
+    award: (d) => award(d.which),
+    skip: () => advance(scores),
+    restart: () => restart(),
+    cont: () => setPhase('play'),
+  }, [phase, revealed, pos, total, scores])
 
   /* ---------- END ---------- */
   if (phase === 'end') {
@@ -167,28 +181,10 @@ export default function VerteNeverte({ teams, report, clearResult, statements, a
           )}
         </div>
 
-        <div className="controls" style={{ marginTop: 22 }}>
-          <div className="label">Ovládanie moderátora</div>
-          {!revealed ? (
-            <button className="btn btn-primary btn-lg" onClick={() => setRevealed(true)}>👁️ Odhaliť pravdu</button>
-          ) : (
-            <div className="group">
-              <span style={{ color: 'var(--muted)', fontSize: 14 }}>Bod pre:</span>
-              <button className="btn btn-blue" onClick={() => award(0)}>{TEAM_NAMES[0]}</button>
-              <button className="btn btn-primary" onClick={() => award(1)}>{TEAM_NAMES[1]}</button>
-              <button className="btn btn-green" onClick={() => award('both')}>Obaja +1</button>
-              <button className="btn" onClick={() => award(null)}>Nikto</button>
-            </div>
-          )}
-          <div className="divider" />
-          <div className="group">
-            <button className="btn btn-ghost" onClick={() => advance(scores)}>Preskočiť →</button>
-            <button className="btn btn-green" onClick={() => advance(scores)} style={{ display: pos + 1 >= total ? 'inline-flex' : 'none' }}>🏁 Vyhodnotiť</button>
-            <button className="btn btn-ghost" onClick={restart}>🔁 Reštartovať hru</button>
-            {musicBtn}
-          </div>
+        <div className="controls" style={{ marginTop: 22, justifyContent: 'center' }}>
+          <button className="btn btn-green btn-lg" onClick={() => openModeratorWindow('vn')}>🔎 Otvoriť moderátorský panel</button>
+          {musicBtn}
         </div>
-        <p className="mod-note">Tímy sa rozhodnú VERÍM / NEVERÍM, moderátor odhalí pravdu a pridelí bod.</p>
       </div>
     </main>
   )

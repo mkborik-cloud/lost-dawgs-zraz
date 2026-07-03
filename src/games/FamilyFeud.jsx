@@ -7,7 +7,7 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
   const TEAM_NAMES = teams.map((t) => t.name)
   const MEMBERS = teams.map((t) => t.members || [])
 
-  const [phase, setPhase] = useState('play')
+  const [phase, setPhase] = useState('intro') // intro (štart kola) | play | end
   const [scores, setScores] = useState([0, 0])
   const [round, setRound] = useState(1)
   const [qIndex, setQIndex] = useState(0)
@@ -29,26 +29,41 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
 
   const allRevealed = q && revealed.size === q.answers.length
 
-  // ---- Sync so samostatným moderátorským oknom (BroadcastChannel) ----
+  // ---- Sync + ovládanie zo samostatného moderátorského okna (BroadcastChannel) ----
   const chanRef = useRef(null)
   const payloadRef = useRef(null)
+  const dispatchRef = useRef(null)
   payloadRef.current = {
-    question: q?.question, category: q?.category, icon: q?.icon,
+    phase, question: q?.question, category: q?.category, icon: q?.icon,
     answers: q?.answers || [], revealed: [...revealed],
     round, mult, totalRounds: TOTAL_ROUNDS, teamNames: TEAM_NAMES, scores,
+    active, strikes, stealing, lifelines, bank, allRevealed: !!allRevealed,
+  }
+  dispatchRef.current = (d) => {
+    switch (d?.type) {
+      case 'hello': chanRef.current?.postMessage({ type: 'state', state: payloadRef.current }); break
+      case 'reveal': revealCell(d.index); break
+      case 'setActive': setActive(d.team); break
+      case 'addStrike': addStrike(); break
+      case 'clearStrikes': setStrikes(0); break
+      case 'steal': setStealing(true); setActive(active === 0 ? 1 : 0); break
+      case 'useLifeline': useLifeline(d.team); break
+      case 'assign': assign(d.team); break
+      case 'adjust': adjust(d.team, d.delta); break
+      case 'startRound': setPhase('play'); break
+      case 'reset': fullReset(); break
+      default: break
+    }
   }
   useEffect(() => {
     const ch = new BroadcastChannel('lostdawgs-feud')
     chanRef.current = ch
-    ch.onmessage = (e) => {
-      if (e.data?.type === 'hello') ch.postMessage({ type: 'state', state: payloadRef.current })
-      else if (e.data?.type === 'reveal') setRevealed((prev) => { const n = new Set(prev); n.add(e.data.index); return n })
-    }
+    ch.onmessage = (e) => dispatchRef.current?.(e.data)
     return () => ch.close()
   }, [])
   useEffect(() => {
     chanRef.current?.postMessage({ type: 'state', state: payloadRef.current })
-  }, [qIndex, revealed, round, scores])
+  }, [phase, qIndex, revealed, round, scores, active, strikes, stealing, lifelines])
 
   function openModerator() {
     window.open(window.location.pathname + '?mod=feud', 'feud-moderator', 'width=580,height=840')
@@ -91,6 +106,7 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
       setStrikes(0)
       setStealing(false)
       setActive(0)
+      setPhase('intro') // medzi kolami — obrazovka štart kola
     }
   }
 
@@ -101,7 +117,7 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
   function fullReset() {
     setScores([0, 0]); setRound(1); setQIndex(0)
     setRevealed(new Set()); setStrikes(0); setActive(0); setStealing(false)
-    setLifelines([3, 3]); setPhase('play')
+    setLifelines([3, 3]); setPhase('intro')
     clearResult()
   }
 
@@ -125,6 +141,21 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
           <div className="draft-actions" style={{ marginTop: 26 }}>
             <button className="btn btn-primary btn-xl" onClick={fullReset}>🔁 Hrať znova</button>
           </div>
+        </div>
+      </main>
+    )
+  }
+
+  /* ---------- ŠTART KOLA (intro) ---------- */
+  if (phase === 'intro') {
+    return (
+      <main className="page">
+        <div className="feud-intro">
+          <img className="feud-intro-logo" src="/5-proti-5.png" alt="Family Feud" />
+          <div className="feud-intro-round">Kolo {round} <span>/ {TOTAL_ROUNDS}</span></div>
+          <div className="feud-intro-mult">Násobič bodov ×{mult}</div>
+          <button className="btn btn-primary btn-xl" onClick={() => setPhase('play')}>🎬 Štart kola {round}</button>
+          <p className="mod-note" style={{ marginTop: 4 }}>Otázka sa ukáže až po kliknutí — nech hráči stihnú prísť k tlačidlu.</p>
         </div>
       </main>
     )
@@ -212,75 +243,9 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
         <span className="bank-pill">💰 Bank kola: {bank} {mult > 1 && <span style={{ opacity: 0.7, fontSize: 14 }}>(×{mult})</span>}</span>
       </div>
 
-      <div className="controls">
-        <div className="label">Ovládanie moderátora</div>
-
-        <div className="group">
-          <button className="btn btn-green" onClick={openModerator}>🔎 Otvoriť moderátorský panel (nové okno)</button>
-          <span style={{ color: 'var(--muted)', fontSize: 13 }}>Odpovede v samostatnom okne — daj ho na svoj laptop, hlavné okno na projektor.</span>
-        </div>
-
-        <div className="divider" />
-
-        <div className="group">
-          <span style={{ color: 'var(--muted)', fontSize: 14 }}>Na ťahu:</span>
-          <button className={'btn' + (active === 0 ? ' btn-blue' : '')} onClick={() => setActive(0)}>{TEAM_NAMES[0]}</button>
-          <button className={'btn' + (active === 1 ? ' btn-primary' : '')} onClick={() => setActive(1)}>{TEAM_NAMES[1]}</button>
-        </div>
-
-        <div className="divider" />
-
-        <div className="group">
-          <button className="btn" onClick={addStrike} disabled={strikes >= 3}>✕ Pridať krížik ({strikes}/3)</button>
-          <button className="btn btn-ghost" onClick={() => setStrikes(0)}>Vynulovať krížiky</button>
-          {strikes >= 3 && !stealing && (
-            <button className="btn btn-green" onClick={() => { setStealing(true); setActive(active === 0 ? 1 : 0) }}>
-              🪤 Súper kradne
-            </button>
-          )}
-          {stealing && <span style={{ color: 'var(--green)', fontWeight: 800 }}>Pokus o krádež — {TEAM_NAMES[active]}</span>}
-        </div>
-
-        <div className="divider" />
-
-        <div className="group">
-          <span style={{ color: 'var(--muted)', fontSize: 14 }}>Joker (lifeline):</span>
-          <button
-            className="btn btn-ghost"
-            onClick={() => useLifeline(0)}
-            disabled={lifelines[0] === 0}
-          >
-            🃏 {TEAM_NAMES[0]} ({lifelines[0]} zostatok)
-          </button>
-          <button
-            className="btn btn-ghost"
-            onClick={() => useLifeline(1)}
-            disabled={lifelines[1] === 0}
-          >
-            🃏 {TEAM_NAMES[1]} ({lifelines[1]} zostatok)
-          </button>
-        </div>
-
-        <div className="divider" />
-
-        <div className="group">
-          <span style={{ color: 'var(--muted)', fontSize: 14 }}>Prideliť bank kola:</span>
-          <button className="btn btn-blue" onClick={() => assign(0)}>→ {TEAM_NAMES[0]} (+{bank})</button>
-          <button className="btn btn-primary" onClick={() => assign(1)}>→ {TEAM_NAMES[1]} (+{bank})</button>
-        </div>
-
-        <div className="divider" />
-
-        <div className="group">
-          <span style={{ color: 'var(--muted)', fontSize: 13 }}>Ručná úprava:</span>
-          <button className="btn btn-ghost" onClick={() => adjust(0, -5)}>T1 −5</button>
-          <button className="btn btn-ghost" onClick={() => adjust(0, 5)}>T1 +5</button>
-          <button className="btn btn-ghost" onClick={() => adjust(1, -5)}>T2 −5</button>
-          <button className="btn btn-ghost" onClick={() => adjust(1, 5)}>T2 +5</button>
-          <button className="btn btn-ghost" onClick={fullReset}>🔁 Reštart hry</button>
-        </div>
+      <div className="controls" style={{ justifyContent: 'center' }}>
+        <button className="btn btn-green btn-lg" onClick={openModerator}>🔎 Otvoriť moderátorský panel</button>
       </div>
-      <p className="mod-note">{allRevealed ? '✅ Celá tabuľa odhalená — prideľ bank víťazovi kola.' : 'Klikni na pole pre odhalenie odpovede.'}</p>
     </main>
   )
 }

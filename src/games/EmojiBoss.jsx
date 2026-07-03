@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { EMOJI_FINAL } from '../data/emoji.js'
+import { useModeratorHost, openModeratorWindow } from '../utils/moderatorSync.js'
 
 const DIFF_LABEL = { easy: 'ľahké', medium: 'stredné', hard: 'ťažké', ultra: 'ultra', fun: 'vtipné' }
 
@@ -69,6 +70,25 @@ export default function EmojiBoss({ teams, report, clearResult, categories }) {
   }
 
   const catList = [{ id: 'all', label: 'Všetko / náhodne', difficulty: 'mixed' }, ...EMOJI_CATEGORIES]
+
+  // ---- Moderátorské okno (na laptope) ----
+  useModeratorHost('lostdawgs-emoji', {
+    phase, finalMode, revealed, turn, catId, pos, total, scores, teamNames: TEAM_NAMES,
+    cur: cur ? { emoji: cur.emoji, answer: cur.answer, cat: cur.cat, diff: cur.diff } : null,
+    final: { emoji: EMOJI_FINAL.emoji, answer: EMOJI_FINAL.answer },
+    cats: catList.map((c) => ({ id: c.id, label: c.label, difficulty: c.difficulty })),
+  }, {
+    reveal: () => setRevealed(true),
+    resolveTurn: (d) => resolveTurn(d.correct),
+    awardFinal: (d) => award(d.team),
+    skip: () => skip(),
+    finish: () => finish(),
+    reset: () => reset(),
+    setTurn: (d) => setTurn(d.team),
+    pickCat: (d) => pickCat(d.id),
+    setFinal: (d) => { setFinalMode(!!d.on); setRevealed(false) },
+    cont: () => setPhase('play'),
+  }, [phase, finalMode, revealed, turn, catId, pos, total, scores])
 
   /* ---------- END ---------- */
   if (phase === 'end') {
@@ -143,24 +163,6 @@ export default function EmojiBoss({ teams, report, clearResult, categories }) {
         </div>
       )}
 
-      <div className="cat-chips">
-        {catList.map((c) => (
-          <button
-            key={c.id}
-            className={'chip' + (catId === c.id && !finalMode ? ' active' : '')}
-            onClick={() => pickCat(c.id)}
-          >
-            {c.label}
-            {c.difficulty && c.difficulty !== 'mixed' && (
-              <span className={'d diff-' + c.difficulty}>· {DIFF_LABEL[c.difficulty]}</span>
-            )}
-          </button>
-        ))}
-        <button className={'chip' + (finalMode ? ' active' : '')} onClick={() => { setFinalMode(true); setRevealed(false) }}>
-          🏆 Finálna otázka
-        </button>
-      </div>
-
       {finalMode ? (
         <div className="emoji-stage">
           <div className="vn-cat" style={{ color: 'var(--gold)' }}>🏆 Finálna otázka rozstrelu</div>
@@ -185,33 +187,8 @@ export default function EmojiBoss({ teams, report, clearResult, categories }) {
         </div>
       )}
 
-      <div className="controls">
-        <div className="label">Ovládanie moderátora</div>
-        {!revealed ? (
-          <button className="btn btn-primary btn-lg" onClick={() => setRevealed(true)} disabled={!finalMode && !cur}>👁️ Odhaliť odpoveď</button>
-        ) : finalMode ? (
-          <div className="group">
-            <span style={{ color: 'var(--muted)', fontSize: 14 }}>Bod pre:</span>
-            <button className="btn btn-blue" onClick={() => award(0)}>{TEAM_NAMES[0]}</button>
-            <button className="btn btn-primary" onClick={() => award(1)}>{TEAM_NAMES[1]}</button>
-            <button className="btn" onClick={() => award(null)}>Nikto</button>
-            <button className="btn btn-ghost" onClick={() => { setFinalMode(false); setRevealed(false) }}>← Späť do hry</button>
-          </div>
-        ) : (
-          <div className="group">
-            <span style={{ color: 'var(--muted)', fontSize: 14 }}>
-              <b style={{ color: turn === 0 ? 'var(--t1)' : 'var(--t2)' }}>{TEAM_NAMES[turn]}</b> na ťahu:
-            </span>
-            <button className="btn btn-green" onClick={() => resolveTurn(true)}>✔ Uhádol (+1)</button>
-            <button className="btn" onClick={() => resolveTurn(false)}>✗ Neuhádol</button>
-          </div>
-        )}
-        <div className="divider" />
-        <div className="group">
-          {!finalMode && <button className="btn btn-ghost" onClick={skip}>Preskočiť →</button>}
-          <button className="btn btn-green" onClick={finish}>🏁 Ukončiť a vyhodnotiť</button>
-          <button className="btn btn-ghost" onClick={reset}>🔁 Reštartovať hru</button>
-        </div>
+      <div className="controls" style={{ justifyContent: 'center' }}>
+        <button className="btn btn-green btn-lg" onClick={() => openModeratorWindow('emoji')}>🔎 Otvoriť moderátorský panel</button>
       </div>
     </main>
   )

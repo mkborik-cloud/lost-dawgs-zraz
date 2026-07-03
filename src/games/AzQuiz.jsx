@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AZ_ROWS, AZ_SIDES, AZ_NEIGHBORS } from '../data/azquiz.js'
+import { useModeratorHost, openModeratorWindow } from '../utils/moderatorSync.js'
 
 const ANSWER_TIME = 30 // sekúnd na odpoveď
 
@@ -135,6 +136,26 @@ export default function AzQuiz({ teams: draftTeams, report, clearResult, categor
 
   function reset() { setPhase('setup'); setWinner(null); clearResult() }
 
+  // ---- Moderátorské okno (na laptope) ----
+  const counts = teams.slice(0, numTeams).map((_, t) => Object.values(owner).filter((v) => v === t).length)
+  useModeratorHost('lostdawgs-az', {
+    phase, mode, turn, winner, numTeams,
+    teams: teams.map((t) => ({ name: t.name, color: t.color })),
+    counts, owner,
+    modal: modal ? { cell: modal.cell, icon: modal.icon, label: modal.label, difficulty: modal.difficulty, q: modal.q, a: modal.a } : null,
+    revealed, timeLeft, answerTime: ANSWER_TIME,
+  }, {
+    setMode: (d) => setMode(d.mode),
+    start: () => start(),
+    openCell: (d) => openCell(d.cell),
+    reveal: () => revealAnswer(),
+    resolve: (d) => resolve(d.correct),
+    close: () => closeModal(),
+    setTurn: (d) => setTurn(d.team),
+    manualWin: () => manualWin(),
+    reset: () => reset(),
+  }, [phase, mode, turn, winner, owner, modal, revealed, timeLeft])
+
   /* ---------- SETUP ---------- */
   if (phase === 'setup') {
     return (
@@ -188,8 +209,6 @@ export default function AzQuiz({ teams: draftTeams, report, clearResult, categor
   }
 
   /* ---------- PLAY ---------- */
-  const counts = teams.slice(0, numTeams).map((_, t) => Object.values(owner).filter((v) => v === t).length)
-
   return (
     <main className="page">
       <div className="page-head"><img className="title-emote" src="/emotes/fudyPodelafka.png" alt="" /><h1>AZ Kvíz</h1><span className="pill">{mode === 'rychlovka' ? 'Rýchlovka' : 'Spoj 3 strany'}</span></div>
@@ -231,50 +250,20 @@ export default function AzQuiz({ teams: draftTeams, report, clearResult, categor
         ))}
       </div>
 
-      <div className="controls" style={{ marginTop: 24 }}>
-        <div className="label">Ovládanie moderátora</div>
-        <div className="group">
-          <span style={{ color: 'var(--muted)', fontSize: 14 }}>Prepnúť ťah:</span>
-          {teams.slice(0, numTeams).map((t, i) => (
-            <button key={i} className={'btn' + (turn === i ? ' btn-primary' : '')} onClick={() => setTurn(i)}>{t.name}</button>
-          ))}
-        </div>
-        <div className="divider" />
-        <div className="group">
-          <button className="btn btn-ghost" onClick={manualWin}>Vyhlásiť víťaza (podľa počtu)</button>
-          <button className="btn btn-ghost" onClick={reset}>Nové nastavenie</button>
-        </div>
+      <div className="controls" style={{ marginTop: 24, justifyContent: 'center' }}>
+        <button className="btn btn-green btn-lg" onClick={() => openModeratorWindow('az')}>🔎 Otvoriť moderátorský panel</button>
       </div>
-      <p className="mod-note">Klikni na voľné alebo zablokované políčko a otvor otázku.</p>
 
       {modal && (
-        <div className="overlay" onClick={closeModal}>
+        <div className="overlay">
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="q-cat">{modal.icon} {modal.label} · políčko {modal.cell} · {modal.difficulty === 'hard' ? '🔴 ťažká' : '🟢 ľahká'}</div>
             <div className="q-text">{modal.q}</div>
-
-            {!revealed ? (
-              <>
-                <div className={'az-timer' + (timeLeft <= 5 ? ' danger' : timeLeft <= 10 ? ' warn' : '')}>
-                  <div className="az-timer-num">{timeLeft}<span>s</span></div>
-                  <div className="az-timer-bar"><div style={{ width: `${(timeLeft / ANSWER_TIME) * 100}%` }} /></div>
-                  <div className="az-timer-lab">Čas na odpoveď</div>
-                </div>
-                <div className="actions">
-                  <button className="btn btn-primary" onClick={revealAnswer}>👁️ Odhaliť odpoveď</button>
-                  <button className="btn btn-ghost" onClick={closeModal}>Zrušiť</button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="q-answer"><span className="lab">Správna odpoveď (vidí moderátor)</span>{modal.a}</div>
-                <div className="actions">
-                  <button className="btn btn-green" onClick={() => resolve(true)}>✔ Správne → {teams[turn].name}</button>
-                  <button className="btn btn-primary" onClick={() => resolve(false)}>✕ Zle → zablokovať</button>
-                  <button className="btn btn-ghost" onClick={closeModal}>Zrušiť</button>
-                </div>
-              </>
-            )}
+            <div className={'az-timer' + (timeLeft <= 5 ? ' danger' : timeLeft <= 10 ? ' warn' : '')}>
+              <div className="az-timer-num">{timeLeft}<span>s</span></div>
+              <div className="az-timer-bar"><div style={{ width: `${(timeLeft / ANSWER_TIME) * 100}%` }} /></div>
+              <div className="az-timer-lab">{revealed ? '⏳ Čas vypršal — moderátor vyhodnotí' : 'Čas na odpoveď'}</div>
+            </div>
           </div>
         </div>
       )}
