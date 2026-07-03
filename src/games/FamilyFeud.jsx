@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { roundMultiplier, TOTAL_ROUNDS } from '../data/familyFeud.js'
 import { playBuzzer } from '../utils/sounds.js'
 
@@ -28,6 +28,31 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
   }, [q, revealed, mult])
 
   const allRevealed = q && revealed.size === q.answers.length
+
+  // ---- Sync so samostatným moderátorským oknom (BroadcastChannel) ----
+  const chanRef = useRef(null)
+  const payloadRef = useRef(null)
+  payloadRef.current = {
+    question: q?.question, category: q?.category, icon: q?.icon,
+    answers: q?.answers || [], revealed: [...revealed],
+    round, mult, totalRounds: TOTAL_ROUNDS, teamNames: TEAM_NAMES, scores,
+  }
+  useEffect(() => {
+    const ch = new BroadcastChannel('lostdawgs-feud')
+    chanRef.current = ch
+    ch.onmessage = (e) => {
+      if (e.data?.type === 'hello') ch.postMessage({ type: 'state', state: payloadRef.current })
+      else if (e.data?.type === 'reveal') setRevealed((prev) => { const n = new Set(prev); n.add(e.data.index); return n })
+    }
+    return () => ch.close()
+  }, [])
+  useEffect(() => {
+    chanRef.current?.postMessage({ type: 'state', state: payloadRef.current })
+  }, [qIndex, revealed, round, scores])
+
+  function openModerator() {
+    window.open(window.location.pathname + '?mod=feud', 'feud-moderator', 'width=580,height=840')
+  }
 
   function revealCell(i) {
     if (revealed.has(i)) return
@@ -189,6 +214,13 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
 
       <div className="controls">
         <div className="label">Ovládanie moderátora</div>
+
+        <div className="group">
+          <button className="btn btn-green" onClick={openModerator}>🔎 Otvoriť moderátorský panel (nové okno)</button>
+          <span style={{ color: 'var(--muted)', fontSize: 13 }}>Odpovede v samostatnom okne — daj ho na svoj laptop, hlavné okno na projektor.</span>
+        </div>
+
+        <div className="divider" />
 
         <div className="group">
           <span style={{ color: 'var(--muted)', fontSize: 14 }}>Na ťahu:</span>

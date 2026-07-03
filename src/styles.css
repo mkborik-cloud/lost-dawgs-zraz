@@ -169,6 +169,31 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .vn-music-ctrl { display: inline-flex; align-items: center; gap: 10px; }
 .vn-music-ctrl input[type=range] { accent-color: var(--red); width: 120px; cursor: pointer; }
 
+/* Family Feud — moderátorský prehľad odpovedí */
+.mod-panel { border: 1px dashed var(--line-strong); border-radius: var(--r); background: rgba(245,197,24,0.04); margin-bottom: 22px; overflow: hidden; }
+.mod-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: rgba(255,255,255,0.03); flex-wrap: wrap; }
+.mod-panel-title { font-size: 13px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); }
+.mod-panel-head .btn { padding: 6px 14px; font-size: 13px; }
+.mod-answers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 16px; }
+.mod-answer { display: flex; align-items: center; gap: 12px; text-align: left; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 11px 14px; color: #fff; font-weight: 700; font-size: 17px; transition: all 0.14s; }
+.mod-answer:hover { border-color: var(--gold); background: var(--card-2); }
+.mod-answer .pos { color: var(--muted-2); font-weight: 900; min-width: 20px; }
+.mod-answer .txt { flex: 1; }
+.mod-answer .pts { color: var(--gold); font-weight: 900; font-variant-numeric: tabular-nums; }
+.mod-answer.done { opacity: 0.5; }
+.mod-answer.done .txt { text-decoration: line-through; }
+
+/* Samostatné moderátorské okno pre 5 proti 5 */
+.feud-mod-page { max-width: 720px; margin: 0 auto; padding: 22px 20px 60px; }
+.feud-mod-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 18px; }
+.fm-title { font-size: 24px; font-weight: 900; color: var(--red-bright); }
+.fm-meta { font-size: 14px; color: var(--muted); font-weight: 700; }
+.fm-wait { color: var(--muted); font-size: 16px; margin-top: 20px; text-align: center; }
+.feud-mod-question { text-align: center; font-size: 24px; font-weight: 800; padding: 18px 20px; background: linear-gradient(180deg, var(--card-2), var(--card)); border: 1px solid var(--line-strong); border-radius: var(--r); margin-bottom: 12px; }
+.feud-mod-question .cat { display: block; font-size: 13px; color: var(--red-bright); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; font-weight: 800; }
+.fm-hint { color: var(--muted); font-size: 13px; text-align: center; margin-bottom: 14px; }
+.fm-answers { grid-template-columns: 1fr; padding: 0; }
+
 .card-game .emoji { font-size: 42px; }
 .card-game .card-emote { width: 60px; height: 60px; object-fit: contain; border-radius: 12px; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4)); }
 /* Emote pri nadpise vnútri disciplíny */
