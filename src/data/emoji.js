@@ -28,7 +28,7 @@ export const EMOJI_CATEGORIES = [
     items: [
       { emoji: '🕷️👑🏰', answer: 'Queen Ansurek (TWW final boss)' },
       { emoji: '🍷🦇🏰', answer: 'Sire Denathrius (Castle Nathria)' },
-      { emoji: '🟢🧟☠️', answer: 'Professor Putricide (ICC)' },
+      { emoji: '🧪🧟☠️', answer: 'Professor Putricide (ICC)' },
       { emoji: '🔱🐍🌊', answer: 'Lady Vashj (Serpentshrine Cavern)' },
       { emoji: '🦂👑💀', answer: "Anub'arak" },
       { emoji: '⚡👑🐉', answer: 'Lei Shen, the Thunder King' },
@@ -64,7 +64,7 @@ export const EMOJI_CATEGORIES = [
       { emoji: '❄️🏰💀', answer: 'Wrath of the Lich King' },
       { emoji: '🐉💥🌍', answer: 'Cataclysm' },
       { emoji: '🟢🔥👹', answer: 'Legion' },
-      { emoji: '🟣👹🌋', answer: 'Warlords of Draenor' },
+      { emoji: '🪓👹🌋', answer: 'Warlords of Draenor' },
       { emoji: '⚓⚔️🏝️', answer: 'Battle for Azeroth' },
       { emoji: '⛏️🕳️🕷️', answer: 'The War Within' },
     ],
