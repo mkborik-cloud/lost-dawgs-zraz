@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { roundMultiplier, TOTAL_ROUNDS } from '../data/familyFeud.js'
 import { playBuzzer } from '../utils/sounds.js'
 
-export default function FamilyFeud({ teams, report, clearResult, questions }) {
+export default function FamilyFeud({ teams, report, clearResult, questions, goHome }) {
   const FEUD_QUESTIONS = questions
   const TEAM_NAMES = teams.map((t) => t.name)
   const MEMBERS = teams.map((t) => t.members || [])
@@ -15,17 +15,21 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
   const [strikes, setStrikes] = useState(0)
   const [active, setActive] = useState(0)
   const [stealing, setStealing] = useState(false)
+  const [frozenBank, setFrozenBank] = useState(null) // bank zmrazený pri krádeži
   const [lifelines, setLifelines] = useState([3, 3]) // remaining lifelines per team
 
   const mult = roundMultiplier(round)
   const q = FEUD_QUESTIONS[qIndex] ?? null
 
-  const bank = useMemo(() => {
+  const liveBank = useMemo(() => {
     if (!q) return 0
     let base = 0
     revealed.forEach((i) => { base += q.answers[i].points })
     return base * mult
   }, [q, revealed, mult])
+
+  // Po „Súper kradne" sa bank zmrazí — odhalenie odpovede pri krádeži ho už nezvyšuje
+  const bank = frozenBank ?? liveBank
 
   const allRevealed = q && revealed.size === q.answers.length
 
@@ -43,10 +47,11 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
     switch (d?.type) {
       case 'hello': chanRef.current?.postMessage({ type: 'state', state: payloadRef.current }); break
       case 'reveal': revealCell(d.index); break
+      case 'hide': hideCell(d.index); break
       case 'setActive': setActive(d.team); break
       case 'addStrike': addStrike(); break
       case 'clearStrikes': setStrikes(0); break
-      case 'steal': setStealing(true); setActive(active === 0 ? 1 : 0); break
+      case 'steal': setFrozenBank(bank); setStealing(true); setStrikes(0); setActive(active === 0 ? 1 : 0); break
       case 'useLifeline': useLifeline(d.team); break
       case 'assign': assign(d.team); break
       case 'adjust': adjust(d.team, d.delta); break
@@ -63,7 +68,7 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
   }, [])
   useEffect(() => {
     chanRef.current?.postMessage({ type: 'state', state: payloadRef.current })
-  }, [phase, qIndex, revealed, round, scores, active, strikes, stealing, lifelines])
+  }, [phase, qIndex, revealed, round, scores, active, strikes, stealing, frozenBank, lifelines])
 
   function openModerator() {
     window.open(window.location.pathname + '?mod=feud', 'feud-moderator', 'width=580,height=840')
@@ -72,6 +77,11 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
   function revealCell(i) {
     if (revealed.has(i)) return
     setRevealed((prev) => new Set(prev).add(i))
+  }
+
+  // Skrytie omylom odhalenej odpovede — body sa odrátajú z banku (bank sa počíta z odhalených)
+  function hideCell(i) {
+    setRevealed((prev) => { const n = new Set(prev); n.delete(i); return n })
   }
 
   function addStrike() {
@@ -105,6 +115,7 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
       setRevealed(new Set())
       setStrikes(0)
       setStealing(false)
+      setFrozenBank(null)
       setActive(0)
       setPhase('intro') // medzi kolami — obrazovka štart kola
     }
@@ -116,7 +127,7 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
 
   function fullReset() {
     setScores([0, 0]); setRound(1); setQIndex(0)
-    setRevealed(new Set()); setStrikes(0); setActive(0); setStealing(false)
+    setRevealed(new Set()); setStrikes(0); setActive(0); setStealing(false); setFrozenBank(null)
     setLifelines([3, 3]); setPhase('intro')
     clearResult()
   }
@@ -140,6 +151,7 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
           </div>
           <div className="draft-actions" style={{ marginTop: 26 }}>
             <button className="btn btn-primary btn-xl" onClick={fullReset}>🔁 Hrať znova</button>
+            <button className="btn btn-green btn-xl" onClick={goHome}>🏠 Späť na hub</button>
           </div>
         </div>
       </main>
@@ -216,7 +228,12 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
         {q.question}
       </div>
 
-      <div className="feud-board">
+      <div className="bank-row">
+        <span className="bank-pill lg">💰 Bank kola: {bank} {mult > 1 && <span style={{ opacity: 0.7, fontSize: 16 }}>(×{mult})</span>}{stealing && <span style={{ opacity: 0.85, fontSize: 16 }}> 🧊 zmrazený</span>}</span>
+      </div>
+
+      {/* Farba odpovedí = farba tímu, ktorý je práve na ťahu */}
+      <div className={'feud-board ' + (active === 0 ? 't1' : 't2')}>
         {q.answers.map((a, i) => (
           <div
             key={i}
@@ -237,10 +254,6 @@ export default function FamilyFeud({ teams, report, clearResult, questions }) {
 
       <div className="strikes">
         {Array.from({ length: strikes }).map((_, i) => <span className="strike-x" key={i}>✕</span>)}
-      </div>
-
-      <div style={{ textAlign: 'center' }}>
-        <span className="bank-pill">💰 Bank kola: {bank} {mult > 1 && <span style={{ opacity: 0.7, fontSize: 14 }}>(×{mult})</span>}</span>
       </div>
 
       <div className="controls" style={{ justifyContent: 'center' }}>

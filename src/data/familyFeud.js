@@ -18,19 +18,19 @@ export const GAMESET_1 = [
   {
     category: 'Gaming',
     icon: '🕹️',
-    question: 'Ktorá herná konzola je historicky najpredávanejšou na svete?',
+    question: 'Historicky najpredávanejšie konzoly na svete sú ...',
     answers: [
       { text: 'PlayStation 2 (PS2)', points: 45 },
       { text: 'Nintendo DS', points: 25 },
-      { text: 'Nintendo Switch', points: 15 },
-      { text: 'Game Boy / Game Boy Color', points: 10 },
-      { text: 'PlayStation 4 (PS4)', points: 5 },
+      { text: 'Nintendo Switch', points: 13 },
+      { text: 'Game Boy / Game Boy Color', points: 11 },
+      { text: 'PlayStation 4 (PS4)', points: 6 },
     ],
   },
   {
     category: 'Filmy & seriály',
     icon: '🎬',
-    question: 'Aký americký sitcom z 90. alebo nultých rokov ľudia pozerajú dookola?',
+    question: 'Americký sitcom z 90. a nultých rokov, ktorý ľudia pozerajú dookola?',
     answers: [
       { text: 'Priatelia (Friends)', points: 48 },
       { text: 'Dva a pol chlapa (Two and a Half Men)', points: 20 },
@@ -57,16 +57,16 @@ export const GAMESET_1 = [
     question: 'Ktorú hlášku v CSKu kričia ruskí hráči do mikrofónu?',
     answers: [
       { text: 'Rush B', points: 45 },
-      { text: 'Cyka blyat', points: 30 },
+      { text: 'Cyka blyat', points: 28 },
       { text: 'Drop AWP (Drop me)', points: 15 },
       { text: 'Idi nahui', points: 7 },
-      { text: 'Info (Giv info)', points: 3 },
+      { text: 'Info (Giv info)', points: 5 },
     ],
   },
   {
     category: 'Futbal',
     icon: '⚽',
-    question: 'Ktorý futbalový hráč je považovaný za jedného z najlepších (historicky / súčasnosť)?',
+    question: 'Ktorý futbalista je považovaný za jedného z najlepších (historicky / súčasnosť)?',
     answers: [
       { text: 'Lionel Messi', points: 35 },
       { text: 'Cristiano Ronaldo', points: 32 },
@@ -79,7 +79,7 @@ export const GAMESET_1 = [
   {
     category: 'League of Legends',
     icon: '⚔️',
-    question: 'Ktorý šampión v LOLku ľudia buď extrémne milujú alebo nenávidia?',
+    question: 'Ktorého šampióna v LOLku ľudia buď milujú alebo nenávidia?',
     answers: [
       { text: 'Yasuo', points: 42 },
       { text: 'Teemo', points: 28 },
@@ -91,7 +91,7 @@ export const GAMESET_1 = [
   {
     category: 'World of Warcraft',
     icon: '🐺',
-    question: 'Aký boss z histórie WoW je medzi hráčmi považovaný za najikonickejšieho?',
+    question: 'Najikonickejší boss z histórie WoW?',
     answers: [
       { text: 'Arthas (Lich King)', points: 45 },
       { text: 'Illidan Stormrage', points: 25 },
@@ -107,7 +107,7 @@ export const GAMESET_2 = [
   {
     category: 'Counter-Strike',
     icon: '🔫',
-    question: 'Povedz najznámejšiu mapu v histórii Counter-Strike.',
+    question: 'Najznámejšia mapu v histórii Counter-Strike:',
     answers: [
       { text: 'Dust 2', points: 45 },
       { text: 'Mirage', points: 20 },
@@ -120,7 +120,7 @@ export const GAMESET_2 = [
   {
     category: 'Futbal',
     icon: '⚽',
-    question: 'Ktorá európska futbalová liga je považovaná za tú najlepšiu?',
+    question: 'Najlepšia európska futbalová liga je najlepšia?',
     answers: [
       { text: 'Anglická Premier League', points: 45 },
       { text: 'Španielska La Liga', points: 25 },
@@ -168,7 +168,7 @@ export const GAMESET_2 = [
   {
     category: 'World of Warcraft',
     icon: '🐺',
-    question: 'Aký je najviac cenný mount vo WoW?',
+    question: 'Aký je najviac cennený mount vo WoW?',
     answers: [
       { text: "Ashes of Al'ar (Fénix)", points: 32 },
       { text: 'Invincible (Arthasov kôň)', points: 28 },
