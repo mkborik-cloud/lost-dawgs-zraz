@@ -376,7 +376,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 /* bank kola nad tabuľou — väčší a hneď na očiach */
 .bank-row { text-align: center; margin: -6px 0 18px; }
 .bank-pill.lg {
-  font-size: 26px; padding: 12px 34px;
+  font-size: 18px; padding: 8px 30px;
   box-shadow: 0 0 24px rgba(245,197,24,0.18);
 }
 
