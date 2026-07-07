@@ -68,15 +68,20 @@ export default function FeudModerator() {
           </div>
 
           <div className="fm-row-info">
-            <span className="bank-pill">💰 Bank: {s.bank}{s.mult > 1 ? ` (×${s.mult})` : ''}</span>
+            <span className="bank-pill">💰 Bank: {s.bank}{s.mult > 1 ? ` (×${s.mult})` : ''}{s.stealing ? ' 🧊' : ''}</span>
             <span className="fm-strikes">Krížiky: {'✕'.repeat(s.strikes) || '—'} ({s.strikes}/3)</span>
             {s.stealing && <span style={{ color: 'var(--green)', fontWeight: 800 }}>🪤 Krádež — {names[s.active]}</span>}
           </div>
 
-          <p className="fm-hint">Klikni na odpoveď → odhalí sa na tabuli (projektore).</p>
+          <p className="fm-hint">Klikni na odpoveď → odhalí sa na tabuli (projektore). Klik na odhalenú ju skryje a body sa odrátajú z banku.</p>
           <div className="mod-answers fm-answers">
             {s.answers.map((a, i) => (
-              <button key={i} className={'mod-answer' + (revealedSet.has(i) ? ' done' : '')} onClick={() => send('reveal', { index: i })}>
+              <button
+                key={i}
+                className={'mod-answer' + (revealedSet.has(i) ? ' done' : '')}
+                onClick={() => send(revealedSet.has(i) ? 'hide' : 'reveal', { index: i })}
+                title={revealedSet.has(i) ? 'Skryť odpoveď (odráta body z banku)' : 'Odhaliť odpoveď'}
+              >
                 <span className="pos">{i + 1}</span>
                 <span className="txt">{a.text}</span>
                 <span className="pts">{a.points}</span>

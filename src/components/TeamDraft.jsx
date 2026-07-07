@@ -164,6 +164,19 @@ export default function TeamDraft({ setTeams }) {
     step()
   }
 
+  // Názvy tímov sa píšu až po vylosovaní — pri zmene ich hneď premietni do zdieľaného stavu
+  function updateName(idx, value) {
+    const next = [...names]
+    next[idx] = value
+    setNames(next)
+    if (done) {
+      setTeams([
+        { name: next[0].trim() || 'Tím 1', members: teamA, color: 't1' },
+        { name: next[1].trim() || 'Tím 2', members: teamB, color: 't2' },
+      ])
+    }
+  }
+
   function reset() {
     clearTimers()
     setTeamA([]); setTeamB([]); setDrawing(false); setDone(false); setReveal('')
@@ -186,22 +199,7 @@ export default function TeamDraft({ setTeams }) {
 
       {!started && (
         <>
-          <p className="section-label" style={{ textAlign: 'center' }}>Názvy tímov</p>
-          <div className="name-inputs" style={{ justifyContent: 'center' }}>
-            <input
-              className="cfg-input" style={{ maxWidth: 260 }}
-              value={names[0]} onChange={(e) => setNames([e.target.value, names[1]])}
-              placeholder="Tím 1"
-            />
-            <span className="vs" style={{ color: 'var(--muted)', fontWeight: 800 }}>vs</span>
-            <input
-              className="cfg-input" style={{ maxWidth: 260 }}
-              value={names[1]} onChange={(e) => setNames([names[0], e.target.value])}
-              placeholder="Tím 2"
-            />
-          </div>
-
-          <p className="section-label" style={{ marginTop: 22 }}>Hráči v žrebovaní ({active.length})</p>
+          <p className="section-label">Hráči v žrebovaní ({active.length})</p>
           <div className="pool">
             {POOL.map((p) => (
               <button
@@ -228,7 +226,23 @@ export default function TeamDraft({ setTeams }) {
       {started && (
         <>
           {done ? (
-            <div className="reveal-name done">✅ Tímy sú rozdelené!</div>
+            <>
+              <div className="reveal-name done">✅ Tímy sú rozdelené!</div>
+              <p className="section-label" style={{ textAlign: 'center' }}>Teraz zadaj názvy tímov</p>
+              <div className="name-inputs" style={{ justifyContent: 'center' }}>
+                <input
+                  className="cfg-input" style={{ maxWidth: 260 }}
+                  value={names[0]} onChange={(e) => updateName(0, e.target.value)}
+                  placeholder="Tím 1"
+                />
+                <span className="vs" style={{ color: 'var(--muted)', fontWeight: 800 }}>vs</span>
+                <input
+                  className="cfg-input" style={{ maxWidth: 260 }}
+                  value={names[1]} onChange={(e) => updateName(1, e.target.value)}
+                  placeholder="Tím 2"
+                />
+              </div>
+            </>
           ) : (
             <div className="slot">
               <div className="slot-target" style={{ color: targetTeam === 0 ? 'var(--t1)' : 'var(--t2)' }}>

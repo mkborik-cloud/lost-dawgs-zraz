@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Home from './components/Home.jsx'
+import FeudRules from './components/FeudRules.jsx'
 import TeamDraft from './components/TeamDraft.jsx'
 import Settings from './components/Settings.jsx'
 import EmoteBackground from './components/EmoteBackground.jsx'
@@ -56,6 +57,10 @@ export default function App() {
 
   // Výsledky disciplín: pre každú hru 0 = Tím 1 (Fudy), 1 = Tím 2 (Myrell), 'tie' = remíza, null = nehrané
   const [feudGameset, setFeudGameset] = useState(null) // 1 or 2
+  const [feudRulesOpen, setFeudRulesOpen] = useState(false)
+  // Moderátorské okno pre 5 proti 5 — dá sa otvoriť už pri výbere gamesetu, pred štartom hry
+  const openFeudModerator = () =>
+    window.open(window.location.pathname + '?mod=feud', 'feud-moderator', 'width=580,height=840')
   const [results, setResults] = useState({ feud: null, emoji: null, az: null, vn: null })
   const report = (key) => (winner) => setResults((r) => ({ ...r, [key]: winner }))
   const clearResult = (key) => () => setResults((r) => ({ ...r, [key]: null }))
@@ -119,6 +124,11 @@ export default function App() {
               🟥 Gameset 2
             </button>
           </div>
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button className="btn btn-lg" onClick={() => setFeudRulesOpen(true)}>📜 Pravidlá</button>
+            <button className="btn btn-green btn-lg" onClick={openFeudModerator}>🔎 Moderátorský panel</button>
+          </div>
+          {feudRulesOpen && <FeudRules onClose={() => setFeudRulesOpen(false)} />}
         </main>
       </div>
       <div style={{ display: screen === 'feud' ? 'block' : 'none' }}>
@@ -128,6 +138,7 @@ export default function App() {
           report={report('feud')}
           clearResult={clearResult('feud')}
           questions={feudGameset === 2 ? GAMESET_2 : GAMESET_1}
+          goHome={() => go('home')}
         />
       </div>
       <div style={{ display: screen === 'emoji' ? 'block' : 'none' }}>

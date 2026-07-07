@@ -351,6 +351,9 @@ button { font-family: inherit; cursor: pointer; border: none; }
   transform: rotateX(180deg); justify-content: space-between; gap: 14px;
   background: linear-gradient(160deg, var(--red), var(--red-deep)); color: #fff;
 }
+/* farba odhalených odpovedí podľa tímu na ťahu */
+.feud-board.t1 .feud-cell .back { background: linear-gradient(160deg, var(--t1), #2b5cb0); }
+.feud-board.t2 .feud-cell .back { background: linear-gradient(160deg, var(--t2), var(--red-deep)); }
 .feud-cell .back .ans { font-size: 21px; font-weight: 800; }
 .feud-cell .back .pts {
   font-size: 24px; font-weight: 900; background: rgba(0,0,0,0.28);
@@ -369,6 +372,12 @@ button { font-family: inherit; cursor: pointer; border: none; }
   display: inline-flex; align-items: center; gap: 10px; margin: 0 auto;
   background: var(--card); border: 1px solid var(--gold); color: var(--gold);
   padding: 10px 22px; border-radius: 999px; font-weight: 800; font-size: 18px;
+}
+/* bank kola nad tabuľou — väčší a hneď na očiach */
+.bank-row { text-align: center; margin: -6px 0 18px; }
+.bank-pill.lg {
+  font-size: 26px; padding: 12px 34px;
+  box-shadow: 0 0 24px rgba(245,197,24,0.18);
 }
 
 .controls {
@@ -497,6 +506,14 @@ button { font-family: inherit; cursor: pointer; border: none; }
 
 .modal .actions { display: flex; gap: 12px; margin-top: 26px; flex-wrap: wrap; }
 .modal .actions .btn { flex: 1; min-width: 140px; }
+
+/* Pravidlá 5 proti 5 (intro modal) */
+.feud-rules { max-height: 86vh; overflow-y: auto; }
+.feud-rules h3 { font-size: 15px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin: 22px 0 8px; font-weight: 800; }
+.feud-rules ul { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 7px; }
+.feud-rules li { font-size: 17px; line-height: 1.45; }
+.feud-rules li::marker { color: var(--gold); }
+.feud-rules b { color: var(--gold); }
 
 /* ===== Verte Neverte ===== */
 .vn-wrap { max-width: 880px; margin: 0 auto; text-align: center; }
