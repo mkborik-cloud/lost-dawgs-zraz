@@ -1,39 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AZ_ROWS, AZ_SIDES, AZ_NEIGHBORS } from '../data/azquiz.js'
+import { AZ_ROWS } from '../data/azquiz.js'
+import { FREE, BLOCKED, assignCategories, pickQuestion, checkWin as checkWinPure } from './azQuizLogic.js'
 import { useModeratorHost, openModeratorWindow } from '../utils/moderatorSync.js'
 
 const ANSWER_TIME = 30 // sekúnd na odpoveď
 
 const COLORS = ['#4d8df0', '#f0404a', '#3fb950', '#f5c518', '#c77dff', '#ff8a3d']
-const FREE = -1, BLOCKED = -2
-
-function shuffle(arr) {
-  const a = [...arr]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
-}
-
-// Súvislá zložka tímu sa musí dotýkať všetkých požadovaných strán
-function teamConnects(owner, team, sidesNeeded) {
-  const cells = Object.keys(owner).map(Number).filter((c) => owner[c] === team)
-  const set = new Set(cells)
-  const seen = new Set()
-  for (const start of cells) {
-    if (seen.has(start)) continue
-    const stack = [start]; seen.add(start); const comp = new Set([start])
-    while (stack.length) {
-      const c = stack.pop()
-      for (const nb of AZ_NEIGHBORS[c]) {
-        if (set.has(nb) && !seen.has(nb)) { seen.add(nb); stack.push(nb); comp.add(nb) }
-      }
-    }
-    if (sidesNeeded.every((side) => side.some((s) => comp.has(s)))) return true
-  }
-  return false
-}
 
 export default function AzQuiz({ teams: draftTeams, report, clearResult, categories }) {
   const AZ_CATEGORIES = categories
@@ -59,12 +31,7 @@ export default function AzQuiz({ teams: draftTeams, report, clearResult, categor
   useEffect(() => () => stopTimer(), [])
 
   function start() {
-    // priraď kategórie rovnomerne (round-robin), aby sa v jednej kategórii nevyčerpali otázky
-    const shuffledCats = shuffle(AZ_CATEGORIES.map((c) => c.id))
-    const assign = shuffle([...Array(28)].map((_, i) => shuffledCats[i % shuffledCats.length]))
-    const map = {}
-    for (let c = 1; c <= 28; c++) map[c] = assign[c - 1]
-    setCellCat(map)
+    setCellCat(assignCategories(AZ_CATEGORIES))
     setOwner(Object.fromEntries([...Array(28)].map((_, i) => [i + 1, FREE])))
     setUsed(new Set()); setTurn(0); setWinner(null); setPhase('play')
     clearResult() // nová hra → výsledok disciplíny sa zatiaľ vynuluje
@@ -73,15 +40,9 @@ export default function AzQuiz({ teams: draftTeams, report, clearResult, categor
   function openCell(cell) {
     if (winner || owner[cell] >= 0) return // už obsadené
     const catId = cellCat[cell]
-    const cat = AZ_CATEGORIES.find((c) => c.id === catId)
-    const isUsed = (cid, i) => used.has(cid + ':' + i)
     // najprv nepoužité otázky z pridelenej kategórie; ak sú vyčerpané, požičaj z inej (bez opakovania)
-    let candidates = cat.questions.map((q, i) => ({ cat, q, i })).filter((x) => !isUsed(catId, x.i))
-    if (candidates.length === 0) {
-      candidates = AZ_CATEGORIES.flatMap((c) => c.questions.map((q, i) => ({ cat: c, q, i })).filter((x) => !isUsed(c.id, x.i)))
-    }
-    if (candidates.length === 0) return // všetky otázky vyčerpané (pri 72 otázkach a 28 políčkach nenastane)
-    const pick = candidates[Math.floor(Math.random() * candidates.length)]
+    const pick = pickQuestion(AZ_CATEGORIES, catId, used)
+    if (!pick) return // všetky otázky vyčerpané
     setModal({ cell, catId: pick.cat.id, icon: pick.cat.icon, label: pick.cat.label, qIdx: pick.i, ...pick.q })
     // spusti 30s odpočet — odpoveď sa odhalí až po čase (alebo skôr cez tlačidlo)
     setRevealed(false); setTimeLeft(ANSWER_TIME)
@@ -112,20 +73,7 @@ export default function AzQuiz({ teams: draftTeams, report, clearResult, categor
   }
 
   function checkWin(o) {
-    if (mode === 'classic' || mode === 'duel') {
-      // víťaz musí súvislou reťazou spojiť VŠETKY 3 strany trojuholníka (ľavú, pravú aj spodnú)
-      for (let t = 0; t < numTeams; t++) {
-        if (teamConnects(o, t, [AZ_SIDES.left, AZ_SIDES.right, AZ_SIDES.bottom])) return t
-      }
-    } else {
-      // rýchlovka: skončí keď je všetko obsadené
-      const allFilled = Object.values(o).every((v) => v !== FREE)
-      if (allFilled) {
-        const counts = teams.slice(0, numTeams).map((_, t) => Object.values(o).filter((v) => v === t).length)
-        return counts.indexOf(Math.max(...counts))
-      }
-    }
-    return null
+    return checkWinPure(o, mode, numTeams)
   }
 
   function manualWin() {
@@ -233,7 +181,7 @@ export default function AzQuiz({ teams: draftTeams, report, clearResult, categor
               return (
                 <button key={cell} className={'hex' + cls} onClick={() => openCell(cell)}>
                   <span className="shape" style={bg ? { background: `linear-gradient(160deg, ${bg}, ${bg}cc)` } : {}}>
-                    {o === FREE ? cell : o === BLOCKED ? '✕' : ''}
+                    {o === FREE ? cell : o === BLOCKED ? <><span className="x">✕</span>{cell}</> : ''}
                   </span>
                 </button>
               )
@@ -255,8 +203,9 @@ export default function AzQuiz({ teams: draftTeams, report, clearResult, categor
       </div>
 
       {modal && (
-        <div className="overlay">
+        <div className="overlay" onClick={closeModal}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={closeModal} title="Zrušiť otázku">✕</button>
             <div className="q-cat">{modal.icon} {modal.label} · políčko {modal.cell} · {modal.difficulty === 'hard' ? '🔴 ťažká' : '🟢 ľahká'}</div>
             <div className="q-text">{modal.q}</div>
             <div className={'az-timer' + (timeLeft <= 5 ? ' danger' : timeLeft <= 10 ? ' warn' : '')}>

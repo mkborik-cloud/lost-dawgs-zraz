@@ -97,7 +97,7 @@ export default function AzModerator() {
                       return (
                         <button key={cell} className={'hex' + cls} onClick={() => send('openCell', { cell })} disabled={o >= 0}>
                           <span className="shape" style={bg ? { background: `linear-gradient(160deg, ${bg}, ${bg}cc)` } : {}}>
-                            {o === FREE ? cell : o === BLOCKED ? '✕' : ''}
+                            {o === FREE ? cell : o === BLOCKED ? <><span className="x">✕</span>{cell}</> : ''}
                           </span>
                         </button>
                       )
